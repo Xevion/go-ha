@@ -158,6 +158,13 @@ func runSchedules(a *App) {
 	}
 
 	for {
+		select {
+		case <-a.ctx.Done():
+			slog.Info("Schedules goroutine shutting down")
+			return
+		default:
+		}
+
 		sched := popSchedule(a)
 
 		// run callback for all schedules before now in case they overlap
@@ -169,7 +176,16 @@ func runSchedules(a *App) {
 		}
 
 		slog.Info("Next schedule", "start_time", sched.nextRunTime)
-		time.Sleep(time.Until(sched.nextRunTime))
+
+		// Use context-aware sleep
+		select {
+		case <-time.After(time.Until(sched.nextRunTime)):
+			// Time elapsed, continue
+		case <-a.ctx.Done():
+			slog.Info("Schedules goroutine shutting down")
+			return
+		}
+
 		sched.maybeRunCallback(a)
 		requeueSchedule(a, sched)
 	}

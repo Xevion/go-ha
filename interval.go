@@ -2,6 +2,7 @@ package gomeassistant
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 
 	"saml.dev/gome-assistant/internal"
@@ -151,6 +152,13 @@ func runIntervals(a *App) {
 	}
 
 	for {
+		select {
+		case <-a.ctx.Done():
+			slog.Info("Intervals goroutine shutting down")
+			return
+		default:
+		}
+
 		i := popInterval(a)
 
 		// run callback for all intervals before now in case they overlap
@@ -161,7 +169,15 @@ func runIntervals(a *App) {
 			i = popInterval(a)
 		}
 
-		time.Sleep(time.Until(i.nextRunTime))
+		// Use context-aware sleep
+		select {
+		case <-time.After(time.Until(i.nextRunTime)):
+			// Time elapsed, continue
+		case <-a.ctx.Done():
+			slog.Info("Intervals goroutine shutting down")
+			return
+		}
+
 		i.maybeRunCallback(a)
 		requeueInterval(a, i)
 	}

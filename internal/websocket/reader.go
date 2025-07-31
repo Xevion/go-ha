@@ -44,6 +44,15 @@ func ListenWebsocket(conn *websocket.Conn, c chan ChanMsg) {
 			Raw:     bytes,
 		}
 
-		c <- chanMsg
+		// Use non-blocking send to avoid hanging on closed channel
+		select {
+		case c <- chanMsg:
+			// Message sent successfully
+		default:
+			// Channel is full or closed, break out of loop
+			slog.Warn("Websocket message channel is full or closed, stopping listener")
+			close(c)
+			return
+		}
 	}
 }

@@ -191,6 +191,37 @@ func (a *App) Cleanup() {
 	}
 }
 
+// Close performs a clean shutdown of the application.
+// It cancels the context, closes the websocket connection,
+// and ensures all background processes are properly terminated.
+func (a *App) Close() error {
+	// Cancel context to signal all goroutines to stop
+	if a.ctxCancel != nil {
+		a.ctxCancel()
+	}
+
+	// Close websocket connection if it exists
+	if a.conn != nil {
+		// Send close message to Home Assistant
+		closeMsg := map[string]string{
+			"type": "close",
+		}
+		_ = a.conn.WriteJSON(closeMsg)
+
+		// Close the websocket connection
+		err := a.conn.Close()
+		if err != nil {
+			slog.Warn("Error closing websocket connection", "error", err)
+		}
+	}
+
+	// Wait a short time for goroutines to finish
+	// This allows for graceful shutdown of background processes
+	time.Sleep(100 * time.Millisecond)
+
+	return nil
+}
+
 func (a *App) RegisterSchedules(schedules ...DailySchedule) {
 	for _, s := range schedules {
 		// realStartTime already set for sunset/sunrise
@@ -346,14 +377,20 @@ func (a *App) Start() {
 	go ws.ListenWebsocket(a.conn, elChan)
 
 	for {
-		msg, ok := <-elChan
-		if !ok {
-			break
-		}
-		if a.entityListenersId == msg.Id {
-			go callEntityListeners(a, msg.Raw)
-		} else {
-			go callEventListeners(a, msg)
+		select {
+		case msg, ok := <-elChan:
+			if !ok {
+				slog.Info("Websocket channel closed, stopping main loop")
+				return
+			}
+			if a.entityListenersId == msg.Id {
+				go callEntityListeners(a, msg.Raw)
+			} else {
+				go callEventListeners(a, msg)
+			}
+		case <-a.ctx.Done():
+			slog.Info("Context cancelled, stopping main loop")
+			return
 		}
 	}
 }
