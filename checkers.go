@@ -3,8 +3,8 @@ package gomeassistant
 import (
 	"time"
 
+	"github.com/Xevion/gome-assistant/internal"
 	"github.com/golang-module/carbon"
-	"saml.dev/gome-assistant/internal"
 )
 
 type conditionCheck struct {

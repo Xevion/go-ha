@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"saml.dev/gome-assistant/internal"
+	"github.com/Xevion/gome-assistant/internal"
 )
 
 type IntervalCallback func(*Service, State)

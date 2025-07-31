@@ -7,8 +7,8 @@ import (
 
 	"github.com/golang-module/carbon"
 
-	"saml.dev/gome-assistant/internal"
-	ws "saml.dev/gome-assistant/internal/websocket"
+	"github.com/Xevion/gome-assistant/internal"
+	ws "github.com/Xevion/gome-assistant/internal/websocket"
 )
 
 type EventListener struct {

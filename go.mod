@@ -1,4 +1,4 @@
-module saml.dev/gome-assistant
+module github.com/Xevion/gome-assistant
 
 go 1.21
 

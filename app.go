@@ -13,10 +13,10 @@ import (
 	"github.com/gorilla/websocket"
 	sunriseLib "github.com/nathan-osman/go-sunrise"
 
-	"saml.dev/gome-assistant/internal"
-	"saml.dev/gome-assistant/internal/http"
-	pq "saml.dev/gome-assistant/internal/priorityqueue"
-	ws "saml.dev/gome-assistant/internal/websocket"
+	"github.com/Xevion/gome-assistant/internal"
+	"github.com/Xevion/gome-assistant/internal/http"
+	pq "github.com/Xevion/gome-assistant/internal/priority_queue"
+	ws "github.com/Xevion/gome-assistant/internal/websocket"
 )
 
 var ErrInvalidArgs = errors.New("invalid arguments provided")

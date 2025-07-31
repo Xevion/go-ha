@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang-module/carbon"
 
-	"saml.dev/gome-assistant/internal"
+	"github.com/Xevion/gome-assistant/internal"
 )
 
 type EntityListener struct {

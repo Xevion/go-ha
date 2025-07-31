@@ -11,7 +11,7 @@ Gome-Assistant is a new library, and I'm opening it up early to get some user fe
 ### Installation
 
 ```
-go get saml.dev/gome-assistant
+go get github.com/Xevion/gome-assistant
 ```
 
 ### Generate Entity Constants
@@ -21,9 +21,9 @@ You can generate type-safe constants for all your Home Assistant entities using 
 1. Create a `gen.yaml` file in your project root:
 
 ```yaml
-url: "http://192.168.1.123:8123"  
-ha_auth_token: "your_auth_token"  # Or set HA_AUTH_TOKEN env var
-home_zone_entity_id: "zone.home"  # Optional: defaults to zone.home
+url: "http://192.168.1.123:8123"
+ha_auth_token: "your_auth_token" # Or set HA_AUTH_TOKEN env var
+home_zone_entity_id: "zone.home" # Optional: defaults to zone.home
 
 # Optional: List of domains to include when generating constants
 # If provided, only these domains will be processed
@@ -37,7 +37,7 @@ exclude_domains: ["device_tracker", "person"]
 2. Add a `//go:generate` comment in your project:
 
 ```go
-//go:generate go run saml.dev/gome-assistant/cmd/generate
+//go:generate go run github.com/Xevion/gome-assistant/cmd/generate
 ```
 
 Optionally use the `-config` flag to customize the file path of the config file.
@@ -87,7 +87,7 @@ The general flow is
 3. Start app
 
 ```go
-import ga "saml.dev/gome-assistant"
+import ga "github.com/Xevion/gome-assistant"
 
 // replace with IP and port of your Home Assistant installation
 app, err := ga.NewApp(ga.NewAppRequest{
@@ -107,7 +107,7 @@ app.RegisterIntervals(...)
 app.Start()
 ```
 
-A full reference is available on [pkg.go.dev](https://pkg.go.dev/saml.dev/gome-assistant), but all you need to know to get started are the four types of automations in gome-assistant.
+A full reference is available on [pkg.go.dev](https://pkg.go.dev/github.com/Xevion/gome-assistant), but all you need to know to get started are the four types of automations in gome-assistant.
 
 - [Daily Schedules](#daily-schedule)
 - [Entity Listeners](#entity-listener)
@@ -205,22 +205,23 @@ app.RegisterEventListeners(eventListener)
 
 Event listeners have other functions to change the behavior.
 
-| Function                                | Info                                                                                                              |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| OnlyBetween("03:00", "14:00")           | Only run your function between two specified times of day                                                         |
-| OnlyAfter("03:00")                      | Only run your function after a specified time of day                                                              |
-| OnlyBefore("03:00")                     | Only run your function before a specified time of day                                                             |
-| Throttle("30s")                         | Minimum time between function calls                                                                               |
+| Function                                | Info                                                                                                             |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| OnlyBetween("03:00", "14:00")           | Only run your function between two specified times of day                                                        |
+| OnlyAfter("03:00")                      | Only run your function after a specified time of day                                                             |
+| OnlyBefore("03:00")                     | Only run your function before a specified time of day                                                            |
+| Throttle("30s")                         | Minimum time between function calls                                                                              |
 | ExceptionDates(time.Time, ...time.Time) | A one time exception on the given date. Time is ignored, applies to whole day. Functions like a "blocklist"      |
 | ExceptionRange(time.Time, time.Time)    | A one time exception between the two date/times. Both date and time are considered. Functions like a "blocklist" |
 
 The callback function receives three parameters:
+
 ```go
 func myCallback(service *ga.Service, state ga.State, data ga.EventData) {
     // You can unmarshal the raw JSON into a type-safe struct
     ev := ga.EventZWaveJSValueNotification{}
     json.Unmarshal(data.RawEventJSON, &ev)
-    
+
     // Handle the event...
 }
 ```

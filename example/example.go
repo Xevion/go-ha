@@ -8,10 +8,10 @@ import (
 
 	// "example/entities" // Optional import generated entities
 
-	ga "saml.dev/gome-assistant"
+	ga "github.com/Xevion/gome-assistant"
 )
 
-//go:generate go run saml.dev/gome-assistant/cmd/generate
+//go:generate go run github.com/Xevion/gome-assistant/cmd/generate
 
 func main() {
 	app, err := ga.NewApp(ga.NewAppRequest{
@@ -24,7 +24,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	defer app.Cleanup()
+	defer func() {
+		slog.Info("Shutting down application...")
+		if err := app.Close(); err != nil {
+			slog.Error("Error during shutdown", "error", err)
+		}
+		slog.Info("Application shutdown complete")
+	}()
 
 	pantryDoor := ga.
 		NewEntityListener().

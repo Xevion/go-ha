@@ -1,7 +1,7 @@
 package services
 
 import (
-	ws "saml.dev/gome-assistant/internal/websocket"
+	ws "github.com/Xevion/gome-assistant/internal/websocket"
 )
 
 /* Structs */

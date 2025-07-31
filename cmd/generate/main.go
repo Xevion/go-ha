@@ -9,8 +9,8 @@ import (
 	"strings"
 	"text/template"
 
+	ga "github.com/Xevion/gome-assistant"
 	"gopkg.in/yaml.v3"
-	ga "saml.dev/gome-assistant"
 )
 
 type Config struct {

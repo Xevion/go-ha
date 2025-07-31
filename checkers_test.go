@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Xevion/gome-assistant/internal"
 	"github.com/stretchr/testify/assert"
-	"saml.dev/gome-assistant/internal"
 )
 
 type MockState struct {
