@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/Xevion/go-ha/internal"
-	"github.com/Xevion/go-ha/internal/parse"
 	"github.com/Xevion/go-ha/types"
 	"github.com/golang-module/carbon"
 )
@@ -77,7 +76,7 @@ func (sb scheduleBuilder) Call(callback ScheduleCallback) scheduleBuilderCall {
 
 // At takes a string in 24hr format time like "15:30".
 func (sb scheduleBuilderCall) At(s string) scheduleBuilderEnd {
-	t := parse.ParseTime(s)
+	t := internal.ParseTime(s)
 	sb.schedule.hour = t.Hour()
 	sb.schedule.minute = t.Minute()
 	return scheduleBuilderEnd(sb)

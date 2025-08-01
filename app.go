@@ -15,7 +15,6 @@ import (
 
 	"github.com/Workiva/go-datastructures/queue"
 	internal "github.com/Xevion/go-ha/internal"
-	"github.com/Xevion/go-ha/internal/parse"
 	ws "github.com/Xevion/go-ha/internal/websocket"
 	"github.com/Xevion/go-ha/types"
 )
@@ -215,7 +214,7 @@ func (a *App) RegisterIntervals(intervals ...Interval) {
 			panic(ErrInvalidArgs)
 		}
 
-		i.nextRunTime = parse.ParseTime(string(i.startTime)).Carbon2Time()
+		i.nextRunTime = internal.ParseTime(string(i.startTime)).Carbon2Time()
 		now := time.Now()
 		for i.nextRunTime.Before(now) {
 			i.nextRunTime = i.nextRunTime.Add(i.frequency)

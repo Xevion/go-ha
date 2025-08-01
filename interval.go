@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/Xevion/go-ha/internal"
-	"github.com/Xevion/go-ha/internal/parse"
 	"github.com/Xevion/go-ha/types"
 )
 
@@ -82,7 +81,7 @@ func (ib intervalBuilder) Call(callback IntervalCallback) intervalBuilderCall {
 
 // Takes a DurationString ("2h", "5m", etc) to set the frequency of the interval.
 func (ib intervalBuilderCall) Every(s types.DurationString) intervalBuilderEnd {
-	d := parse.ParseDuration(string(s))
+	d := internal.ParseDuration(string(s))
 	ib.interval.frequency = d
 	return intervalBuilderEnd(ib)
 }

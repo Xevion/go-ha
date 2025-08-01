@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/Xevion/go-ha/internal"
-	"github.com/Xevion/go-ha/internal/parse"
 	"github.com/Xevion/go-ha/types"
 	"github.com/golang-module/carbon"
 )
@@ -18,8 +17,8 @@ func CheckWithinTimeRange(startTime, endTime string) ConditionCheck {
 	// if betweenStart and betweenEnd both set, first account for midnight
 	// overlap, then check if between those times.
 	if startTime != "" && endTime != "" {
-		parsedStart := parse.ParseTime(startTime)
-		parsedEnd := parse.ParseTime(endTime)
+		parsedStart := internal.ParseTime(startTime)
+		parsedEnd := internal.ParseTime(endTime)
 
 		// check for midnight overlap
 		if parsedEnd.Lt(parsedStart) { // example turn on night lights when motion from 23:00 to 07:00
@@ -36,9 +35,9 @@ func CheckWithinTimeRange(startTime, endTime string) ConditionCheck {
 		}
 
 		// otherwise just check individual before/after
-	} else if startTime != "" && parse.ParseTime(startTime).IsFuture() {
+	} else if startTime != "" && internal.ParseTime(startTime).IsFuture() {
 		cc.fail = true
-	} else if endTime != "" && parse.ParseTime(endTime).IsPast() {
+	} else if endTime != "" && internal.ParseTime(endTime).IsPast() {
 		cc.fail = true
 	}
 	return cc
@@ -170,7 +169,7 @@ func CheckStartEndTime(s types.TimeString, isStart bool) ConditionCheck {
 	}
 
 	now := time.Now()
-	parsedTime := parse.ParseTime(string(s)).Carbon2Time()
+	parsedTime := internal.ParseTime(string(s)).Carbon2Time()
 	if isStart {
 		if parsedTime.After(now) {
 			cc.fail = true

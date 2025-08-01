@@ -8,7 +8,6 @@ import (
 	"github.com/golang-module/carbon"
 
 	"github.com/Xevion/go-ha/internal"
-	"github.com/Xevion/go-ha/internal/parse"
 	ws "github.com/Xevion/go-ha/internal/websocket"
 	"github.com/Xevion/go-ha/types"
 )
@@ -82,7 +81,7 @@ func (b eventListenerBuilder3) OnlyBefore(end string) eventListenerBuilder3 {
 }
 
 func (b eventListenerBuilder3) Throttle(s types.DurationString) eventListenerBuilder3 {
-	d := parse.ParseDuration(string(s))
+	d := internal.ParseDuration(string(s))
 	b.eventListener.throttle = d
 	return b
 }
