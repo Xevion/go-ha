@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"reflect"
 	"runtime"
+	"sync/atomic"
 	"time"
 
 	"github.com/golang-module/carbon"
@@ -16,11 +17,12 @@ type EnabledDisabledInfo struct {
 	RunOnError bool
 }
 
-var id int64 = 0
+var (
+	id atomic.Int64 // default value is 0
+)
 
 func GetId() int64 {
-	id += 1
-	return id
+	return id.Add(1)
 }
 
 // Parses a HH:MM string.
