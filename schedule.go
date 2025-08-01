@@ -194,16 +194,16 @@ func runSchedules(a *App) {
 }
 
 func (s DailySchedule) maybeRunCallback(a *App) {
-	if c := checkExceptionDates(s.exceptionDates); c.fail {
+	if c := CheckExceptionDates(s.exceptionDates); c.fail {
 		return
 	}
-	if c := checkAllowlistDates(s.allowlistDates); c.fail {
+	if c := CheckAllowlistDates(s.allowlistDates); c.fail {
 		return
 	}
-	if c := checkEnabledEntity(a.state, s.enabledEntities); c.fail {
+	if c := CheckEnabledEntity(a.state, s.enabledEntities); c.fail {
 		return
 	}
-	if c := checkDisabledEntity(a.state, s.disabledEntities); c.fail {
+	if c := CheckDisabledEntity(a.state, s.disabledEntities); c.fail {
 		return
 	}
 	go s.callback(a.service, a.state)

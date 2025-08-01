@@ -9,12 +9,12 @@ import (
 	"github.com/golang-module/carbon"
 )
 
-type conditionCheck struct {
+type ConditionCheck struct {
 	fail bool
 }
 
-func checkWithinTimeRange(startTime, endTime string) conditionCheck {
-	cc := conditionCheck{fail: false}
+func CheckWithinTimeRange(startTime, endTime string) ConditionCheck {
+	cc := ConditionCheck{fail: false}
 	// if betweenStart and betweenEnd both set, first account for midnight
 	// overlap, then check if between those times.
 	if startTime != "" && endTime != "" {
@@ -44,8 +44,8 @@ func checkWithinTimeRange(startTime, endTime string) conditionCheck {
 	return cc
 }
 
-func checkStatesMatch(listenerState, s string) conditionCheck {
-	cc := conditionCheck{fail: false}
+func CheckStatesMatch(listenerState, s string) ConditionCheck {
+	cc := ConditionCheck{fail: false}
 	// check if fromState or toState are set and don't match
 	if listenerState != "" && listenerState != s {
 		cc.fail = true
@@ -53,8 +53,8 @@ func checkStatesMatch(listenerState, s string) conditionCheck {
 	return cc
 }
 
-func checkThrottle(throttle time.Duration, lastRan carbon.Carbon) conditionCheck {
-	cc := conditionCheck{fail: false}
+func CheckThrottle(throttle time.Duration, lastRan carbon.Carbon) ConditionCheck {
+	cc := ConditionCheck{fail: false}
 	// check if Throttle is set and that duration hasn't passed since lastRan
 	if throttle.Seconds() > 0 &&
 		lastRan.DiffAbsInSeconds(carbon.Now()) < int64(throttle.Seconds()) {
@@ -63,8 +63,8 @@ func checkThrottle(throttle time.Duration, lastRan carbon.Carbon) conditionCheck
 	return cc
 }
 
-func checkExceptionDates(eList []time.Time) conditionCheck {
-	cc := conditionCheck{fail: false}
+func CheckExceptionDates(eList []time.Time) ConditionCheck {
+	cc := ConditionCheck{fail: false}
 	for _, e := range eList {
 		y1, m1, d1 := e.Date()
 		y2, m2, d2 := time.Now().Date()
@@ -76,8 +76,8 @@ func checkExceptionDates(eList []time.Time) conditionCheck {
 	return cc
 }
 
-func checkExceptionRanges(eList []types.TimeRange) conditionCheck {
-	cc := conditionCheck{fail: false}
+func CheckExceptionRanges(eList []types.TimeRange) ConditionCheck {
+	cc := ConditionCheck{fail: false}
 	now := time.Now()
 	for _, eRange := range eList {
 		if now.After(eRange.Start) && now.Before(eRange.End) {
@@ -88,8 +88,8 @@ func checkExceptionRanges(eList []types.TimeRange) conditionCheck {
 	return cc
 }
 
-func checkEnabledEntity(s State, infos []internal.EnabledDisabledInfo) conditionCheck {
-	cc := conditionCheck{fail: false}
+func CheckEnabledEntity(s State, infos []internal.EnabledDisabledInfo) ConditionCheck {
+	cc := ConditionCheck{fail: false}
 	if len(infos) == 0 {
 		return cc
 	}
@@ -116,8 +116,8 @@ func checkEnabledEntity(s State, infos []internal.EnabledDisabledInfo) condition
 	return cc
 }
 
-func checkDisabledEntity(s State, infos []internal.EnabledDisabledInfo) conditionCheck {
-	cc := conditionCheck{fail: false}
+func CheckDisabledEntity(s State, infos []internal.EnabledDisabledInfo) ConditionCheck {
+	cc := ConditionCheck{fail: false}
 	if len(infos) == 0 {
 		return cc
 	}
@@ -145,12 +145,12 @@ func checkDisabledEntity(s State, infos []internal.EnabledDisabledInfo) conditio
 	return cc
 }
 
-func checkAllowlistDates(eList []time.Time) conditionCheck {
+func CheckAllowlistDates(eList []time.Time) ConditionCheck {
 	if len(eList) == 0 {
-		return conditionCheck{fail: false}
+		return ConditionCheck{fail: false}
 	}
 
-	cc := conditionCheck{fail: true}
+	cc := ConditionCheck{fail: true}
 	for _, e := range eList {
 		y1, m1, d1 := e.Date()
 		y2, m2, d2 := time.Now().Date()
@@ -162,8 +162,8 @@ func checkAllowlistDates(eList []time.Time) conditionCheck {
 	return cc
 }
 
-func checkStartEndTime(s types.TimeString, isStart bool) conditionCheck {
-	cc := conditionCheck{fail: false}
+func CheckStartEndTime(s types.TimeString, isStart bool) ConditionCheck {
+	cc := ConditionCheck{fail: false}
 	// pass immediately if default
 	if s == "00:00" {
 		return cc

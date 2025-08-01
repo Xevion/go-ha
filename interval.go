@@ -59,8 +59,8 @@ func (i Interval) String() string {
 	return fmt.Sprintf("Interval{ call %q every %s%s%s }",
 		internal.GetFunctionName(i.callback),
 		i.frequency,
-		formatStartOrEndString(i.startTime /* isStart = */, true),
-		formatStartOrEndString(i.endTime /* isStart = */, false),
+		formatStartOrEndString(i.startTime, true),
+		formatStartOrEndString(i.endTime, false),
 	)
 }
 
@@ -105,7 +105,10 @@ func (ib intervalBuilderEnd) ExceptionDates(t time.Time, tl ...time.Time) interv
 }
 
 func (ib intervalBuilderEnd) ExceptionRange(start, end time.Time) intervalBuilderEnd {
-	ib.interval.exceptionRanges = append(ib.interval.exceptionRanges, types.TimeRange{start, end})
+	ib.interval.exceptionRanges = append(
+		ib.interval.exceptionRanges,
+		types.TimeRange{Start: start, End: end},
+	)
 	return ib
 }
 
@@ -186,22 +189,22 @@ func runIntervals(a *App) {
 }
 
 func (i Interval) maybeRunCallback(a *App) {
-	if c := checkStartEndTime(i.startTime /* isStart = */, true); c.fail {
+	if c := CheckStartEndTime(i.startTime /* isStart = */, true); c.fail {
 		return
 	}
-	if c := checkStartEndTime(i.endTime /* isStart = */, false); c.fail {
+	if c := CheckStartEndTime(i.endTime /* isStart = */, false); c.fail {
 		return
 	}
-	if c := checkExceptionDates(i.exceptionDates); c.fail {
+	if c := CheckExceptionDates(i.exceptionDates); c.fail {
 		return
 	}
-	if c := checkExceptionRanges(i.exceptionRanges); c.fail {
+	if c := CheckExceptionRanges(i.exceptionRanges); c.fail {
 		return
 	}
-	if c := checkEnabledEntity(a.state, i.enabledEntities); c.fail {
+	if c := CheckEnabledEntity(a.state, i.enabledEntities); c.fail {
 		return
 	}
-	if c := checkDisabledEntity(a.state, i.disabledEntities); c.fail {
+	if c := CheckDisabledEntity(a.state, i.disabledEntities); c.fail {
 		return
 	}
 	go i.callback(a.service, a.state)

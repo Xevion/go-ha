@@ -66,7 +66,7 @@ func TestEnabledEntity_StateEqual_Passes(t *testing.T) {
 	state := MockState{
 		EqualsReturn: true,
 	}
-	c := checkEnabledEntity(state, list(runOnError))
+	c := CheckEnabledEntity(state, list(runOnError))
 	assert.False(t, c.fail, "should pass")
 }
 
@@ -74,7 +74,7 @@ func TestEnabledEntity_StateNotEqual_Fails(t *testing.T) {
 	state := MockState{
 		EqualsReturn: false,
 	}
-	c := checkEnabledEntity(state, list(runOnError))
+	c := CheckEnabledEntity(state, list(runOnError))
 	assert.True(t, c.fail, "should fail")
 }
 
@@ -82,7 +82,7 @@ func TestEnabledEntity_NetworkError_DontRun_Fails(t *testing.T) {
 	state := MockState{
 		EqualsError: true,
 	}
-	c := checkEnabledEntity(state, list(dontRunOnError))
+	c := CheckEnabledEntity(state, list(dontRunOnError))
 	assert.True(t, c.fail, "should fail")
 }
 
@@ -90,7 +90,7 @@ func TestEnabledEntity_NetworkError_StillRun_Passes(t *testing.T) {
 	state := MockState{
 		EqualsError: true,
 	}
-	c := checkEnabledEntity(state, list(runOnError))
+	c := CheckEnabledEntity(state, list(runOnError))
 	assert.False(t, c.fail, "should fail")
 }
 
@@ -98,7 +98,7 @@ func TestDisabledEntity_StateEqual_Fails(t *testing.T) {
 	state := MockState{
 		EqualsReturn: true,
 	}
-	c := checkDisabledEntity(state, list(runOnError))
+	c := CheckDisabledEntity(state, list(runOnError))
 	assert.True(t, c.fail, "should pass")
 }
 
@@ -106,7 +106,7 @@ func TestDisabledEntity_StateNotEqual_Passes(t *testing.T) {
 	state := MockState{
 		EqualsReturn: false,
 	}
-	c := checkDisabledEntity(state, list(runOnError))
+	c := CheckDisabledEntity(state, list(runOnError))
 	assert.False(t, c.fail, "should fail")
 }
 
@@ -114,7 +114,7 @@ func TestDisabledEntity_NetworkError_DontRun_Fails(t *testing.T) {
 	state := MockState{
 		EqualsError: true,
 	}
-	c := checkDisabledEntity(state, list(dontRunOnError))
+	c := CheckDisabledEntity(state, list(dontRunOnError))
 	assert.True(t, c.fail, "should fail")
 }
 
@@ -122,16 +122,16 @@ func TestDisabledEntity_NetworkError_StillRun_Passes(t *testing.T) {
 	state := MockState{
 		EqualsError: true,
 	}
-	c := checkDisabledEntity(state, list(runOnError))
+	c := CheckDisabledEntity(state, list(runOnError))
 	assert.False(t, c.fail, "should fail")
 }
 
 func TestStatesMatch(t *testing.T) {
-	c := checkStatesMatch("hey", "hey")
+	c := CheckStatesMatch("hey", "hey")
 	assert.False(t, c.fail, "should pass")
 }
 
 func TestStatesDontMatch(t *testing.T) {
-	c := checkStatesMatch("hey", "bye")
+	c := CheckStatesMatch("hey", "bye")
 	assert.True(t, c.fail, "should fail")
 }

@@ -1,4 +1,4 @@
-package gomeassistant
+package types
 
 import "time"
 

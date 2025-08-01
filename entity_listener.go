@@ -146,7 +146,7 @@ func (b elBuilder3) ExceptionDates(t time.Time, tl ...time.Time) elBuilder3 {
 }
 
 func (b elBuilder3) ExceptionRange(start, end time.Time) elBuilder3 {
-	b.entityListener.exceptionRanges = append(b.entityListener.exceptionRanges, types.TimeRange{start, end})
+	b.entityListener.exceptionRanges = append(b.entityListener.exceptionRanges, types.TimeRange{Start: start, End: end})
 	return b
 }
 
@@ -215,31 +215,31 @@ func callEntityListeners(app *App, msgBytes []byte) {
 
 	for _, l := range listeners {
 		// Check conditions
-		if c := checkWithinTimeRange(l.betweenStart, l.betweenEnd); c.fail {
+		if c := CheckWithinTimeRange(l.betweenStart, l.betweenEnd); c.fail {
 			continue
 		}
-		if c := checkStatesMatch(l.fromState, data.OldState.State); c.fail {
+		if c := CheckStatesMatch(l.fromState, data.OldState.State); c.fail {
 			continue
 		}
-		if c := checkStatesMatch(l.toState, data.NewState.State); c.fail {
+		if c := CheckStatesMatch(l.toState, data.NewState.State); c.fail {
 			if l.delayTimer != nil {
 				l.delayTimer.Stop()
 			}
 			continue
 		}
-		if c := checkThrottle(l.throttle, l.lastRan); c.fail {
+		if c := CheckThrottle(l.throttle, l.lastRan); c.fail {
 			continue
 		}
-		if c := checkExceptionDates(l.exceptionDates); c.fail {
+		if c := CheckExceptionDates(l.exceptionDates); c.fail {
 			continue
 		}
-		if c := checkExceptionRanges(l.exceptionRanges); c.fail {
+		if c := CheckExceptionRanges(l.exceptionRanges); c.fail {
 			continue
 		}
-		if c := checkEnabledEntity(app.state, l.enabledEntities); c.fail {
+		if c := CheckEnabledEntity(app.state, l.enabledEntities); c.fail {
 			continue
 		}
-		if c := checkDisabledEntity(app.state, l.disabledEntities); c.fail {
+		if c := CheckDisabledEntity(app.state, l.disabledEntities); c.fail {
 			continue
 		}
 
