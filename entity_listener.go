@@ -9,6 +9,7 @@ import (
 
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/internal/parse"
+	"github.com/Xevion/go-ha/types"
 )
 
 type EntityListener struct {
@@ -26,7 +27,7 @@ type EntityListener struct {
 	delayTimer *time.Timer
 
 	exceptionDates  []time.Time
-	exceptionRanges []timeRange
+	exceptionRanges []types.TimeRange
 
 	runOnStartup          bool
 	runOnStartupCompleted bool
@@ -127,13 +128,13 @@ func (b elBuilder3) ToState(s string) elBuilder3 {
 	return b
 }
 
-func (b elBuilder3) Duration(s DurationString) elBuilder3 {
+func (b elBuilder3) Duration(s types.DurationString) elBuilder3 {
 	d := parse.ParseDuration(string(s))
 	b.entityListener.delay = d
 	return b
 }
 
-func (b elBuilder3) Throttle(s DurationString) elBuilder3 {
+func (b elBuilder3) Throttle(s types.DurationString) elBuilder3 {
 	d := parse.ParseDuration(string(s))
 	b.entityListener.throttle = d
 	return b
@@ -145,7 +146,7 @@ func (b elBuilder3) ExceptionDates(t time.Time, tl ...time.Time) elBuilder3 {
 }
 
 func (b elBuilder3) ExceptionRange(start, end time.Time) elBuilder3 {
-	b.entityListener.exceptionRanges = append(b.entityListener.exceptionRanges, timeRange{start, end})
+	b.entityListener.exceptionRanges = append(b.entityListener.exceptionRanges, types.TimeRange{start, end})
 	return b
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/internal/parse"
 	ws "github.com/Xevion/go-ha/internal/websocket"
+	"github.com/Xevion/go-ha/types"
 )
 
 type EventListener struct {
@@ -21,7 +22,7 @@ type EventListener struct {
 	lastRan      carbon.Carbon
 
 	exceptionDates  []time.Time
-	exceptionRanges []timeRange
+	exceptionRanges []types.TimeRange
 
 	enabledEntities  []internal.EnabledDisabledInfo
 	disabledEntities []internal.EnabledDisabledInfo
@@ -80,7 +81,7 @@ func (b eventListenerBuilder3) OnlyBefore(end string) eventListenerBuilder3 {
 	return b
 }
 
-func (b eventListenerBuilder3) Throttle(s DurationString) eventListenerBuilder3 {
+func (b eventListenerBuilder3) Throttle(s types.DurationString) eventListenerBuilder3 {
 	d := parse.ParseDuration(string(s))
 	b.eventListener.throttle = d
 	return b
@@ -92,7 +93,7 @@ func (b eventListenerBuilder3) ExceptionDates(t time.Time, tl ...time.Time) even
 }
 
 func (b eventListenerBuilder3) ExceptionRange(start, end time.Time) eventListenerBuilder3 {
-	b.eventListener.exceptionRanges = append(b.eventListener.exceptionRanges, timeRange{start, end})
+	b.eventListener.exceptionRanges = append(b.eventListener.exceptionRanges, types.TimeRange{start, end})
 	return b
 }
 

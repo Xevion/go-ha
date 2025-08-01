@@ -10,6 +10,7 @@ import (
 	"text/template"
 
 	ga "github.com/Xevion/go-ha"
+	"github.com/Xevion/go-ha/types"
 	"gopkg.in/yaml.v3"
 )
 
@@ -98,7 +99,7 @@ func generate(config Config) error {
 		config.HomeZoneEntityId = "zone.home"
 	}
 
-	app, err := ga.NewApp(ga.NewAppRequest{
+	app, err := ga.NewApp(types.NewAppRequest{
 		URL:              config.URL,
 		HAAuthToken:      config.HAAuthToken,
 		HomeZoneEntityId: config.HomeZoneEntityId,

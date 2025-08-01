@@ -5,6 +5,7 @@ import (
 
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/internal/parse"
+	"github.com/Xevion/go-ha/types"
 	"github.com/golang-module/carbon"
 )
 
@@ -75,11 +76,11 @@ func checkExceptionDates(eList []time.Time) conditionCheck {
 	return cc
 }
 
-func checkExceptionRanges(eList []timeRange) conditionCheck {
+func checkExceptionRanges(eList []types.TimeRange) conditionCheck {
 	cc := conditionCheck{fail: false}
 	now := time.Now()
 	for _, eRange := range eList {
-		if now.After(eRange.start) && now.Before(eRange.end) {
+		if now.After(eRange.Start) && now.Before(eRange.End) {
 			cc.fail = true
 			break
 		}
@@ -161,7 +162,7 @@ func checkAllowlistDates(eList []time.Time) conditionCheck {
 	return cc
 }
 
-func checkStartEndTime(s TimeString, isStart bool) conditionCheck {
+func checkStartEndTime(s types.TimeString, isStart bool) conditionCheck {
 	cc := conditionCheck{fail: false}
 	// pass immediately if default
 	if s == "00:00" {

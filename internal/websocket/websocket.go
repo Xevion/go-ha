@@ -14,9 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
-
 	"github.com/Xevion/go-ha/internal"
+	"github.com/gorilla/websocket"
 )
 
 var ErrInvalidToken = errors.New("invalid authentication token")

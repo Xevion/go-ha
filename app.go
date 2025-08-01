@@ -17,6 +17,7 @@ import (
 	internal "github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/internal/parse"
 	ws "github.com/Xevion/go-ha/internal/websocket"
+	"github.com/Xevion/go-ha/types"
 )
 
 var ErrInvalidArgs = errors.New("invalid arguments provided")
@@ -41,10 +42,7 @@ type App struct {
 	eventListeners    map[string][]*EventListener
 }
 
-type Item struct {
-	Value    interface{}
-	Priority float64
-}
+type Item types.Item
 
 func (mi Item) Compare(other queue.Item) int {
 	if mi.Priority > other.(Item).Priority {
@@ -53,51 +51,6 @@ func (mi Item) Compare(other queue.Item) int {
 		return 0
 	}
 	return -1
-}
-
-// DurationString represents a duration, such as "2s" or "24h".
-// See https://pkg.go.dev/time#ParseDuration for all valid time units.
-type DurationString string
-
-// TimeString is a 24-hr format time "HH:MM" such as "07:30".
-type TimeString string
-
-type timeRange struct {
-	start time.Time
-	end   time.Time
-}
-
-type NewAppRequest struct {
-	// Required
-	URL string
-
-	// Optional
-	// Deprecated: use URL instead
-	// IpAddress of your Home Assistant instance i.e. "localhost"
-	// or "192.168.86.59" etc.
-	IpAddress string
-
-	// Optional
-	// Deprecated: use URL instead
-	// Port number Home Assistant is running on. Defaults to 8123.
-	Port string
-
-	// Required
-	// Auth token generated in Home Assistant. Used
-	// to connect to the Websocket API.
-	HAAuthToken string
-
-	// Required
-	// EntityId of the zone representing your home e.g. "zone.home".
-	// Used to pull latitude/longitude from Home Assistant
-	// to calculate sunset/sunrise times.
-	HomeZoneEntityId string
-
-	// Optional
-	// Whether to use secure connections for http and websockets.
-	// Setting this to `true` will use `https://` instead of `https://`
-	// and `wss://` instead of `ws://`.
-	Secure bool
 }
 
 // validateHomeZone verifies that the home zone entity exists and has latitude/longitude
@@ -130,7 +83,7 @@ func validateHomeZone(state State, entityID string) error {
 NewApp establishes the websocket connection and returns an object
 you can use to register schedules and listeners.
 */
-func NewApp(request NewAppRequest) (*App, error) {
+func NewApp(request types.NewAppRequest) (*App, error) {
 	if (request.URL == "" && request.IpAddress == "") || request.HAAuthToken == "" {
 		slog.Error("URL and HAAuthToken are required arguments in NewAppRequest")
 		return nil, ErrInvalidArgs
@@ -306,7 +259,7 @@ func (a *App) RegisterEventListeners(evls ...EventListener) {
 	}
 }
 
-func getSunriseSunset(s *StateImpl, sunrise bool, dateToUse carbon.Carbon, offset ...DurationString) carbon.Carbon {
+func getSunriseSunset(s *StateImpl, sunrise bool, dateToUse carbon.Carbon, offset ...types.DurationString) carbon.Carbon {
 	date := dateToUse.Carbon2Time()
 	rise, set := sunriseLib.SunriseSunset(s.latitude, s.longitude, date.Year(), date.Month(), date.Day())
 	rise, set = rise.Local(), set.Local()
@@ -339,7 +292,7 @@ func getSunriseSunset(s *StateImpl, sunrise bool, dateToUse carbon.Carbon, offse
 	return setOrRiseToday
 }
 
-func getNextSunRiseOrSet(a *App, sunrise bool, offset ...DurationString) carbon.Carbon {
+func getNextSunRiseOrSet(a *App, sunrise bool, offset ...types.DurationString) carbon.Carbon {
 	sunriseOrSunset := getSunriseSunset(a.state, sunrise, carbon.Now(), offset...)
 	if sunriseOrSunset.Lt(carbon.Now()) {
 		// if we're past today's sunset or sunrise (accounting for offset) then get tomorrows

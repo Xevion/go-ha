@@ -7,6 +7,7 @@ import (
 
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/internal/parse"
+	"github.com/Xevion/go-ha/types"
 	"github.com/golang-module/carbon"
 )
 
@@ -23,7 +24,7 @@ type DailySchedule struct {
 
 	isSunrise bool
 	isSunset  bool
-	sunOffset DurationString
+	sunOffset types.DurationString
 
 	exceptionDates []time.Time
 	allowlistDates []time.Time
@@ -85,7 +86,7 @@ func (sb scheduleBuilderCall) At(s string) scheduleBuilderEnd {
 // Sunrise takes an optional duration string that is passed to time.ParseDuration.
 // Examples include "-1.5h", "30m", etc. See https://pkg.go.dev/time#ParseDuration
 // for full list.
-func (sb scheduleBuilderCall) Sunrise(offset ...DurationString) scheduleBuilderEnd {
+func (sb scheduleBuilderCall) Sunrise(offset ...types.DurationString) scheduleBuilderEnd {
 	sb.schedule.isSunrise = true
 	if len(offset) > 0 {
 		sb.schedule.sunOffset = offset[0]
@@ -96,7 +97,7 @@ func (sb scheduleBuilderCall) Sunrise(offset ...DurationString) scheduleBuilderE
 // Sunset takes an optional duration string that is passed to time.ParseDuration.
 // Examples include "-1.5h", "30m", etc. See https://pkg.go.dev/time#ParseDuration
 // for full list.
-func (sb scheduleBuilderCall) Sunset(offset ...DurationString) scheduleBuilderEnd {
+func (sb scheduleBuilderCall) Sunset(offset ...types.DurationString) scheduleBuilderEnd {
 	sb.schedule.isSunset = true
 	if len(offset) > 0 {
 		sb.schedule.sunOffset = offset[0]

@@ -9,13 +9,14 @@ import (
 	"github.com/golang-module/carbon"
 
 	internal "github.com/Xevion/go-ha/internal"
+	"github.com/Xevion/go-ha/types"
 )
 
 type State interface {
-	AfterSunrise(...DurationString) bool
-	BeforeSunrise(...DurationString) bool
-	AfterSunset(...DurationString) bool
-	BeforeSunset(...DurationString) bool
+	AfterSunrise(...types.DurationString) bool
+	BeforeSunrise(...types.DurationString) bool
+	AfterSunset(...types.DurationString) bool
+	BeforeSunset(...types.DurationString) bool
 	ListEntities() ([]EntityState, error)
 	Get(entityId string) (EntityState, error)
 	Equals(entityId, state string) (bool, error)
@@ -99,20 +100,20 @@ func (s *StateImpl) Equals(entityId string, expectedState string) (bool, error) 
 	return currentState.State == expectedState, nil
 }
 
-func (s *StateImpl) BeforeSunrise(offset ...DurationString) bool {
+func (s *StateImpl) BeforeSunrise(offset ...types.DurationString) bool {
 	sunrise := getSunriseSunset(s /* sunrise = */, true, carbon.Now(), offset...)
 	return carbon.Now().Lt(sunrise)
 }
 
-func (s *StateImpl) AfterSunrise(offset ...DurationString) bool {
+func (s *StateImpl) AfterSunrise(offset ...types.DurationString) bool {
 	return !s.BeforeSunrise(offset...)
 }
 
-func (s *StateImpl) BeforeSunset(offset ...DurationString) bool {
+func (s *StateImpl) BeforeSunset(offset ...types.DurationString) bool {
 	sunset := getSunriseSunset(s /* sunrise = */, false, carbon.Now(), offset...)
 	return carbon.Now().Lt(sunset)
 }
 
-func (s *StateImpl) AfterSunset(offset ...DurationString) bool {
+func (s *StateImpl) AfterSunset(offset ...types.DurationString) bool {
 	return !s.BeforeSunset(offset...)
 }

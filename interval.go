@@ -7,6 +7,7 @@ import (
 
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/internal/parse"
+	"github.com/Xevion/go-ha/types"
 )
 
 type IntervalCallback func(*Service, State)
@@ -14,12 +15,12 @@ type IntervalCallback func(*Service, State)
 type Interval struct {
 	frequency   time.Duration
 	callback    IntervalCallback
-	startTime   TimeString
-	endTime     TimeString
+	startTime   types.TimeString
+	endTime     types.TimeString
 	nextRunTime time.Time
 
 	exceptionDates  []time.Time
-	exceptionRanges []timeRange
+	exceptionRanges []types.TimeRange
 
 	enabledEntities  []internal.EnabledDisabledInfo
 	disabledEntities []internal.EnabledDisabledInfo
@@ -63,7 +64,7 @@ func (i Interval) String() string {
 	)
 }
 
-func formatStartOrEndString(s TimeString, isStart bool) string {
+func formatStartOrEndString(s types.TimeString, isStart bool) string {
 	if s == "00:00" {
 		return ""
 	}
@@ -80,20 +81,20 @@ func (ib intervalBuilder) Call(callback IntervalCallback) intervalBuilderCall {
 }
 
 // Takes a DurationString ("2h", "5m", etc) to set the frequency of the interval.
-func (ib intervalBuilderCall) Every(s DurationString) intervalBuilderEnd {
+func (ib intervalBuilderCall) Every(s types.DurationString) intervalBuilderEnd {
 	d := parse.ParseDuration(string(s))
 	ib.interval.frequency = d
 	return intervalBuilderEnd(ib)
 }
 
 // Takes a TimeString ("HH:MM") when this interval will start running for the day.
-func (ib intervalBuilderEnd) StartingAt(s TimeString) intervalBuilderEnd {
+func (ib intervalBuilderEnd) StartingAt(s types.TimeString) intervalBuilderEnd {
 	ib.interval.startTime = s
 	return ib
 }
 
 // Takes a TimeString ("HH:MM") when this interval will stop running for the day.
-func (ib intervalBuilderEnd) EndingAt(s TimeString) intervalBuilderEnd {
+func (ib intervalBuilderEnd) EndingAt(s types.TimeString) intervalBuilderEnd {
 	ib.interval.endTime = s
 	return ib
 }
@@ -104,7 +105,7 @@ func (ib intervalBuilderEnd) ExceptionDates(t time.Time, tl ...time.Time) interv
 }
 
 func (ib intervalBuilderEnd) ExceptionRange(start, end time.Time) intervalBuilderEnd {
-	ib.interval.exceptionRanges = append(ib.interval.exceptionRanges, timeRange{start, end})
+	ib.interval.exceptionRanges = append(ib.interval.exceptionRanges, types.TimeRange{start, end})
 	return ib
 }
 

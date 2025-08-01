@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Xevion/go-ha/internal"
+	"github.com/Xevion/go-ha/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,16 +16,16 @@ type MockState struct {
 	GetError     bool
 }
 
-func (s MockState) AfterSunrise(_ ...DurationString) bool {
+func (s MockState) AfterSunrise(_ ...types.DurationString) bool {
 	return true
 }
-func (s MockState) BeforeSunrise(_ ...DurationString) bool {
+func (s MockState) BeforeSunrise(_ ...types.DurationString) bool {
 	return true
 }
-func (s MockState) AfterSunset(_ ...DurationString) bool {
+func (s MockState) AfterSunset(_ ...types.DurationString) bool {
 	return true
 }
-func (s MockState) BeforeSunset(_ ...DurationString) bool {
+func (s MockState) BeforeSunset(_ ...types.DurationString) bool {
 	return true
 }
 func (s MockState) Get(eid string) (EntityState, error) {
