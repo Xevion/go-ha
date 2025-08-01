@@ -16,7 +16,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	i "github.com/Xevion/gome-assistant/internal"
+	"github.com/Xevion/gome-assistant/internal"
 )
 
 var ErrInvalidToken = errors.New("invalid authentication token")
@@ -47,7 +47,9 @@ func ReadMessage(conn *websocket.Conn) ([]byte, error) {
 }
 
 func ConnectionFromUri(baseURL *url.URL, authToken string) (*websocket.Conn, context.Context, context.CancelFunc, error) {
-	ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second*3)
+	// Create a short timeout context for the connection only
+	connCtx, connCtxCancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer connCtxCancel() // Always cancel the connection context when we're done
 
 	// Shallow copy the URL to avoid modifying the original
 	urlWebsockets := *baseURL
@@ -61,9 +63,8 @@ func ConnectionFromUri(baseURL *url.URL, authToken string) (*websocket.Conn, con
 
 	// Init websocket connection
 	dialer := websocket.DefaultDialer
-	conn, _, err := dialer.DialContext(ctx, urlWebsockets.String(), nil)
+	conn, _, err := dialer.DialContext(connCtx, urlWebsockets.String(), nil)
 	if err != nil {
-		ctxCancel()
 		slog.Error("Failed to connect to websocket. Check URI\n", "url", urlWebsockets)
 		return nil, nil, nil, err
 	}
@@ -71,28 +72,28 @@ func ConnectionFromUri(baseURL *url.URL, authToken string) (*websocket.Conn, con
 	// Read auth_required message
 	_, err = ReadMessage(conn)
 	if err != nil {
-		ctxCancel()
 		slog.Error("Unknown error creating websocket client\n")
 		return nil, nil, nil, err
 	}
 
 	// Send auth message
-	err = SendAuthMessage(conn, ctx, authToken)
+	err = SendAuthMessage(conn, connCtx, authToken)
 	if err != nil {
-		ctxCancel()
 		slog.Error("Unknown error creating websocket client\n")
 		return nil, nil, nil, err
 	}
 
 	// Verify auth message was successful
-	err = VerifyAuthResponse(conn, ctx)
+	err = VerifyAuthResponse(conn, connCtx)
 	if err != nil {
-		ctxCancel()
 		slog.Error("Auth token is invalid. Please double check it or create a new token in your Home Assistant profile\n")
 		return nil, nil, nil, err
 	}
 
-	return conn, ctx, ctxCancel, nil
+	// Create a new background context for the application lifecycle (no timeout)
+	appCtx, appCtxCancel := context.WithCancel(context.Background())
+
+	return conn, appCtx, appCtxCancel, nil
 }
 
 func SendAuthMessage(conn *websocket.Conn, ctx context.Context, token string) error {
@@ -139,7 +140,7 @@ func SubscribeToStateChangedEvents(id int64, conn *WebsocketWriter, ctx context.
 func SubscribeToEventType(eventType string, conn *WebsocketWriter, ctx context.Context, id ...int64) {
 	var finalId int64
 	if len(id) == 0 {
-		finalId = i.GetId()
+		finalId = internal.GetId()
 	} else {
 		finalId = id[0]
 	}
