@@ -192,7 +192,6 @@ func (b elBuilder3) Build() EntityListener {
 	return b.entityListener
 }
 
-/* Functions */
 func callEntityListeners(app *App, msgBytes []byte) {
 	msg := stateChangedMsg{}
 	_ = json.Unmarshal(msgBytes, &msg)

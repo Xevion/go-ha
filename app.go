@@ -67,11 +67,9 @@ func validateHomeZone(state State, entityID string) error {
 	// Verify it has latitude and longitude
 	if entity.Attributes == nil {
 		return fmt.Errorf("home zone entity '%s' has no attributes", entityID)
-	}
-	if entity.Attributes["latitude"] == nil {
+	} else if entity.Attributes["latitude"] == nil {
 		return fmt.Errorf("home zone entity '%s' missing latitude attribute", entityID)
-	}
-	if entity.Attributes["longitude"] == nil {
+	} else if entity.Attributes["longitude"] == nil {
 		return fmt.Errorf("home zone entity '%s' missing longitude attribute", entityID)
 	}
 
@@ -140,27 +138,27 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 	}, nil
 }
 
-func (a *App) Cleanup() {
-	if a.ctxCancel != nil {
-		a.ctxCancel()
+func (app *App) Cleanup() {
+	if app.ctxCancel != nil {
+		app.ctxCancel()
 	}
 }
 
 // Close performs a clean shutdown of the application.
 // It cancels the context, closes the websocket connection,
 // and ensures all background processes are properly terminated.
-func (a *App) Close() error {
+func (app *App) Close() error {
 	// Close websocket connection if it exists
-	if a.conn != nil {
+	if app.conn != nil {
 		deadline := time.Now().Add(10 * time.Second)
-		err := a.conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), deadline)
+		err := app.conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), deadline)
 		if err != nil {
 			slog.Warn("Error writing close message", "error", err)
 			return err
 		}
 
 		// Close the websocket connection
-		err = a.conn.Close()
+		err = app.conn.Close()
 		if err != nil {
 			slog.Warn("Error closing websocket connection", "error", err)
 			return err
@@ -171,8 +169,8 @@ func (a *App) Close() error {
 	time.Sleep(500 * time.Millisecond)
 
 	// Cancel context to signal all goroutines to stop
-	if a.ctxCancel != nil {
-		a.ctxCancel()
+	if app.ctxCancel != nil {
+		app.ctxCancel()
 	}
 
 	// Wait a short time for goroutines to finish
@@ -182,12 +180,12 @@ func (a *App) Close() error {
 	return nil
 }
 
-func (a *App) RegisterSchedules(schedules ...DailySchedule) {
+func (app *App) RegisterSchedules(schedules ...DailySchedule) {
 	for _, s := range schedules {
 		// realStartTime already set for sunset/sunrise
 		if s.isSunrise || s.isSunset {
-			s.nextRunTime = getNextSunRiseOrSet(a, s.isSunrise, s.sunOffset).Carbon2Time()
-			a.schedules.Put()
+			s.nextRunTime = getNextSunRiseOrSet(app, s.isSunrise, s.sunOffset).Carbon2Time()
+			app.schedules.Put()
 			continue
 		}
 
@@ -200,14 +198,14 @@ func (a *App) RegisterSchedules(schedules ...DailySchedule) {
 		}
 
 		s.nextRunTime = startTime.Carbon2Time()
-		a.schedules.Put(Item{
+		app.schedules.Put(Item{
 			Value:    s,
 			Priority: float64(startTime.Carbon2Time().Unix()),
 		})
 	}
 }
 
-func (a *App) RegisterIntervals(intervals ...Interval) {
+func (app *App) RegisterIntervals(intervals ...Interval) {
 	for _, i := range intervals {
 		if i.frequency == 0 {
 			slog.Error("A schedule must use either set frequency via Every()")
@@ -219,14 +217,14 @@ func (a *App) RegisterIntervals(intervals ...Interval) {
 		for i.nextRunTime.Before(now) {
 			i.nextRunTime = i.nextRunTime.Add(i.frequency)
 		}
-		a.intervals.Put(Item{
+		app.intervals.Put(Item{
 			Value:    i,
 			Priority: float64(i.nextRunTime.Unix()),
 		})
 	}
 }
 
-func (a *App) RegisterEntityListeners(etls ...EntityListener) {
+func (app *App) RegisterEntityListeners(etls ...EntityListener) {
 	for _, etl := range etls {
 		etl := etl
 		if etl.delay != 0 && etl.toState == "" {
@@ -235,24 +233,24 @@ func (a *App) RegisterEntityListeners(etls ...EntityListener) {
 		}
 
 		for _, entity := range etl.entityIds {
-			if elList, ok := a.entityListeners[entity]; ok {
-				a.entityListeners[entity] = append(elList, &etl)
+			if elList, ok := app.entityListeners[entity]; ok {
+				app.entityListeners[entity] = append(elList, &etl)
 			} else {
-				a.entityListeners[entity] = []*EntityListener{&etl}
+				app.entityListeners[entity] = []*EntityListener{&etl}
 			}
 		}
 	}
 }
 
-func (a *App) RegisterEventListeners(evls ...EventListener) {
+func (app *App) RegisterEventListeners(evls ...EventListener) {
 	for _, evl := range evls {
 		evl := evl
 		for _, eventType := range evl.eventTypes {
-			if elList, ok := a.eventListeners[eventType]; ok {
-				a.eventListeners[eventType] = append(elList, &evl)
+			if elList, ok := app.eventListeners[eventType]; ok {
+				app.eventListeners[eventType] = append(elList, &evl)
 			} else {
-				ws.SubscribeToEventType(eventType, a.wsWriter, a.ctx)
-				a.eventListeners[eventType] = []*EventListener{&evl}
+				ws.SubscribeToEventType(eventType, app.wsWriter, app.ctx)
+				app.eventListeners[eventType] = []*EventListener{&evl}
 			}
 		}
 	}
@@ -301,32 +299,32 @@ func getNextSunRiseOrSet(a *App, sunrise bool, offset ...types.DurationString) c
 	return sunriseOrSunset
 }
 
-func (a *App) Start() {
-	slog.Info("Starting", "schedules", a.schedules.Len())
-	slog.Info("Starting", "entity listeners", len(a.entityListeners))
-	slog.Info("Starting", "event listeners", len(a.eventListeners))
+func (app *App) Start() {
+	slog.Info("Starting", "schedules", app.schedules.Len())
+	slog.Info("Starting", "entity listeners", len(app.entityListeners))
+	slog.Info("Starting", "event listeners", len(app.eventListeners))
 
-	go runSchedules(a)
-	go runIntervals(a)
+	go runSchedules(app)
+	go runIntervals(app)
 
 	// subscribe to state_changed events
 	id := internal.NextId()
-	ws.SubscribeToStateChangedEvents(id, a.wsWriter, a.ctx)
-	a.entityListenersId = id
+	ws.SubscribeToStateChangedEvents(id, app.wsWriter, app.ctx)
+	app.entityListenersId = id
 
-	// entity listeners runOnStartup
-	for eid, etls := range a.entityListeners {
+	// Run entity listeners startup
+	for eid, etls := range app.entityListeners {
 		for _, etl := range etls {
 			// ensure each ETL only runs once, even if
 			// it listens to multiple entities
 			if etl.runOnStartup && !etl.runOnStartupCompleted {
-				entityState, err := a.state.Get(eid)
+				entityState, err := app.state.Get(eid)
 				if err != nil {
 					slog.Warn("Failed to get entity state \"", eid, "\" during startup, skipping RunOnStartup")
 				}
 
 				etl.runOnStartupCompleted = true
-				go etl.callback(a.service, a.state, EntityData{
+				go etl.callback(app.service, app.state, EntityData{
 					TriggerEntityId: eid,
 					FromState:       entityState.State,
 					FromAttributes:  entityState.Attributes,
@@ -340,7 +338,7 @@ func (a *App) Start() {
 
 	// entity listeners and event listeners
 	elChan := make(chan ws.ChanMsg, 100) // Add buffer to prevent channel overflow
-	go ws.ListenWebsocket(a.conn, elChan)
+	go ws.ListenWebsocket(app.conn, elChan)
 
 	for {
 		select {
@@ -349,22 +347,22 @@ func (a *App) Start() {
 				slog.Info("Websocket channel closed, stopping main loop")
 				return
 			}
-			if a.entityListenersId == msg.Id {
-				go callEntityListeners(a, msg.Raw)
+			if app.entityListenersId == msg.Id {
+				go callEntityListeners(app, msg.Raw)
 			} else {
-				go callEventListeners(a, msg)
+				go callEventListeners(app, msg)
 			}
-		case <-a.ctx.Done():
+		case <-app.ctx.Done():
 			slog.Info("Context cancelled, stopping main loop")
 			return
 		}
 	}
 }
 
-func (a *App) GetService() *Service {
-	return a.service
+func (app *App) GetService() *Service {
+	return app.service
 }
 
-func (a *App) GetState() State {
-	return a.state
+func (app *App) GetState() State {
+	return app.state
 }
