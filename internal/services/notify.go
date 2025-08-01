@@ -1,8 +1,8 @@
 package services
 
 import (
-	ws "github.com/Xevion/gome-assistant/internal/websocket"
-	"github.com/Xevion/gome-assistant/types"
+	ws "github.com/Xevion/go-ha/internal/websocket"
+	"github.com/Xevion/go-ha/types"
 )
 
 type Notify struct {

@@ -1,20 +1,18 @@
-# Gome-Assistant
+# go-ha
 
 Write strongly typed [Home Assistant](https://www.home-assistant.io/) automations in Go!
 
-## Disclaimer
-
-Gome-Assistant is a new library, and I'm opening it up early to get some user feedback on the API and help shape the direction. I plan for it to grow to cover all Home Assistant use cases, services, and event types. So it's possible that breaking changes will happen before v1.0.0!
-
-## Quick Start
-
-### Installation
-
-```
-go get github.com/Xevion/gome-assistant
+```bash
+go get github.com/Xevion/go-ha
 ```
 
-### Generate Entity Constants
+or in `go.mod`:
+
+```go
+require github.com/Xevion/go-ha
+```
+
+## Generate Entity Constants
 
 You can generate type-safe constants for all your Home Assistant entities using `go generate`. This makes it easier to reference entities in your code.
 
@@ -37,7 +35,7 @@ exclude_domains: ["device_tracker", "person"]
 2. Add a `//go:generate` comment in your project:
 
 ```go
-//go:generate go run github.com/Xevion/gome-assistant/cmd/generate
+//go:generate go run github.com/Xevion/go-ha/cmd/generate
 ```
 
 Optionally use the `-config` flag to customize the file path of the config file.
@@ -72,11 +70,11 @@ Check out [`example/example.go`](./example/example.go) for an example of the 3 t
 
 ### Run your code
 
-Keeping with the simplicity that Go is famous for, you don't need a specific environment or docker container to run Gome-Assistant. You just write and run your code like any other Go binary. So once you build your code, you can run it however you like — using `screen` or `tmux`, a cron job, a linux service, or wrap it up in a docker container if you like!
+Keeping with the simplicity that Go is famous for, you don't need a specific environment or docker container to run go-ha. You just write and run your code like any other Go binary. So once you build your code, you can run it however you like — using `screen` or `tmux`, a cron job, a linux service, or wrap it up in a docker container if you like!
 
-> _❗ No promises, but I may provide a Docker image with file watching to automatically restart gome-assistant, to make it easier to use gome-assistant on a fully managed Home Assistant installation._
+> _❗ No promises, but I may provide a Docker image with file watching to automatically restart go-ha, to make it easier to use go-ha on a fully managed Home Assistant installation._
 
-## gome-assistant Concepts
+## go-ha Concepts
 
 ### Overview
 
@@ -87,13 +85,13 @@ The general flow is
 3. Start app
 
 ```go
-import ga "github.com/Xevion/gome-assistant"
+import ga "github.com/Xevion/go-ha"
 
 // replace with IP and port of your Home Assistant installation
 app, err := ga.NewApp(ga.NewAppRequest{
-	URL:              "http://192.168.1.123:8123",
-	HAAuthToken:      os.Getenv("HA_AUTH_TOKEN"),
-	HomeZoneEntityId: "zone.home",
+ URL:              "http://192.168.1.123:8123",
+ HAAuthToken:      os.Getenv("HA_AUTH_TOKEN"),
+ HomeZoneEntityId: "zone.home",
 })
 
 // create automations here (see next sections)
@@ -107,7 +105,7 @@ app.RegisterIntervals(...)
 app.Start()
 ```
 
-A full reference is available on [pkg.go.dev](https://pkg.go.dev/github.com/Xevion/gome-assistant), but all you need to know to get started are the four types of automations in gome-assistant.
+A full reference is available on [pkg.go.dev](https://pkg.go.dev/github.com/Xevion/go-ha), but all you need to know to get started are the four types of automations in go-ha.
 
 - [Daily Schedules](#daily-schedule)
 - [Entity Listeners](#entity-listener)
@@ -226,7 +224,7 @@ func myCallback(service *ga.Service, state ga.State, data ga.EventData) {
 }
 ```
 
-> 💡 Check `eventTypes.go` for pre-defined event types, or create your own struct type for custom events and contribute them back to gome-assistant with a PR.
+> 💡 Check `eventTypes.go` for pre-defined event types, or create your own struct type for custom events and contribute them back to go-ha with a PR.
 
 ### Interval
 

@@ -16,7 +16,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/Xevion/gome-assistant/internal"
+	"github.com/Xevion/go-ha/internal"
 )
 
 var ErrInvalidToken = errors.New("invalid authentication token")

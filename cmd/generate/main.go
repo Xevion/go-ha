@@ -9,7 +9,7 @@ import (
 	"strings"
 	"text/template"
 
-	ga "github.com/Xevion/gome-assistant"
+	ga "github.com/Xevion/go-ha"
 	"gopkg.in/yaml.v3"
 )
 

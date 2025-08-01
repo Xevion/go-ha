@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/Xevion/gome-assistant/internal"
-	"github.com/Xevion/gome-assistant/internal/parse"
+	"github.com/Xevion/go-ha/internal"
+	"github.com/Xevion/go-ha/internal/parse"
 	"github.com/golang-module/carbon"
 )
 

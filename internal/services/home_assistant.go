@@ -1,7 +1,7 @@
 package services
 
 import (
-	ws "github.com/Xevion/gome-assistant/internal/websocket"
+	ws "github.com/Xevion/go-ha/internal/websocket"
 )
 
 type HomeAssistant struct {

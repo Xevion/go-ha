@@ -1,8 +1,8 @@
 package services
 
 import (
-	"github.com/Xevion/gome-assistant/internal"
-	ws "github.com/Xevion/gome-assistant/internal/websocket"
+	"github.com/Xevion/go-ha/internal"
+	ws "github.com/Xevion/go-ha/internal/websocket"
 )
 
 type Event struct {

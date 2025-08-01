@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Xevion/gome-assistant/internal"
+	"github.com/Xevion/go-ha/internal"
 	"github.com/stretchr/testify/assert"
 )
 

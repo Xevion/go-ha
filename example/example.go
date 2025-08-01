@@ -8,10 +8,10 @@ import (
 
 	// "example/entities" // Optional import generated entities
 
-	ga "github.com/Xevion/gome-assistant"
+	ga "github.com/Xevion/go-ha"
 )
 
-//go:generate go run github.com/Xevion/gome-assistant/cmd/generate
+//go:generate go run github.com/Xevion/go-ha/cmd/generate
 
 func main() {
 	app, err := ga.NewApp(ga.NewAppRequest{

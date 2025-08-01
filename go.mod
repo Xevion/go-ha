@@ -1,4 +1,4 @@
-module github.com/Xevion/gome-assistant
+module github.com/Xevion/go-ha
 
 go 1.21
 

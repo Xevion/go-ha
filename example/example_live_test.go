@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/yaml.v3"
 
-	ga "github.com/Xevion/gome-assistant"
+	ga "github.com/Xevion/go-ha"
 )
 
 type (

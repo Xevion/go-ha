@@ -1,8 +1,8 @@
 package gomeassistant
 
 import (
-	"github.com/Xevion/gome-assistant/internal/services"
-	ws "github.com/Xevion/gome-assistant/internal/websocket"
+	"github.com/Xevion/go-ha/internal/services"
+	ws "github.com/Xevion/go-ha/internal/websocket"
 )
 
 type Service struct {

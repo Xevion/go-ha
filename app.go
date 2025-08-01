@@ -14,9 +14,9 @@ import (
 	sunriseLib "github.com/nathan-osman/go-sunrise"
 
 	"github.com/Workiva/go-datastructures/queue"
-	internal "github.com/Xevion/gome-assistant/internal"
-	"github.com/Xevion/gome-assistant/internal/parse"
-	ws "github.com/Xevion/gome-assistant/internal/websocket"
+	internal "github.com/Xevion/go-ha/internal"
+	"github.com/Xevion/go-ha/internal/parse"
+	ws "github.com/Xevion/go-ha/internal/websocket"
 )
 
 var ErrInvalidArgs = errors.New("invalid arguments provided")
