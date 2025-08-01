@@ -23,7 +23,7 @@ type FireEventRequest struct {
 // as `event_data`.
 func (e Event) Fire(eventType string, eventData ...map[string]any) error {
 	req := FireEventRequest{
-		Id:   internal.GetId(),
+		Id:   internal.NextId(),
 		Type: "fire_event",
 	}
 

@@ -140,7 +140,7 @@ func SubscribeToStateChangedEvents(id int64, conn *WebsocketWriter, ctx context.
 func SubscribeToEventType(eventType string, conn *WebsocketWriter, ctx context.Context, id ...int64) {
 	var finalId int64
 	if len(id) == 0 {
-		finalId = internal.GetId()
+		finalId = internal.NextId()
 	} else {
 		finalId = id[0]
 	}

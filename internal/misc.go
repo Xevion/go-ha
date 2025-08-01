@@ -16,7 +16,9 @@ var (
 	id atomic.Int64 // default value is 0
 )
 
-func GetId() int64 {
+// NextId returns a unique integer (for the given process), often used for providing a uniquely identifiable
+// id for a request. This function is thread-safe.
+func NextId() int64 {
 	return id.Add(1)
 }
 

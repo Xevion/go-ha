@@ -370,7 +370,7 @@ func (a *App) Start() {
 	go runIntervals(a)
 
 	// subscribe to state_changed events
-	id := internal.GetId()
+	id := internal.NextId()
 	ws.SubscribeToStateChangedEvents(id, a.wsWriter, a.ctx)
 	a.entityListenersId = id
 
