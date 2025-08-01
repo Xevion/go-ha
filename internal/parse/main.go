@@ -1,29 +1,12 @@
-package internal
+package parse
 
 import (
 	"fmt"
 	"log/slog"
-	"reflect"
-	"runtime"
-	"sync/atomic"
 	"time"
 
 	"github.com/golang-module/carbon"
 )
-
-type EnabledDisabledInfo struct {
-	Entity     string
-	State      string
-	RunOnError bool
-}
-
-var (
-	id atomic.Int64 // default value is 0
-)
-
-func GetId() int64 {
-	return id.Add(1)
-}
 
 // Parses a HH:MM string.
 func ParseTime(s string) carbon.Carbon {
@@ -44,8 +27,4 @@ func ParseDuration(s string) time.Duration {
 		panic(parsingErr)
 	}
 	return d
-}
-
-func GetFunctionName(i interface{}) string {
-	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Xevion/gome-assistant/internal"
+	"github.com/Xevion/gome-assistant/internal/parse"
 )
 
 type IntervalCallback func(*Service, State)
@@ -80,7 +81,7 @@ func (ib intervalBuilder) Call(callback IntervalCallback) intervalBuilderCall {
 
 // Takes a DurationString ("2h", "5m", etc) to set the frequency of the interval.
 func (ib intervalBuilderCall) Every(s DurationString) intervalBuilderEnd {
-	d := internal.ParseDuration(string(s))
+	d := parse.ParseDuration(string(s))
 	ib.interval.frequency = d
 	return intervalBuilderEnd(ib)
 }

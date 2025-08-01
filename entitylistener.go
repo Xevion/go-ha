@@ -8,6 +8,7 @@ import (
 	"github.com/golang-module/carbon"
 
 	"github.com/Xevion/gome-assistant/internal"
+	"github.com/Xevion/gome-assistant/internal/parse"
 )
 
 type EntityListener struct {
@@ -127,13 +128,13 @@ func (b elBuilder3) ToState(s string) elBuilder3 {
 }
 
 func (b elBuilder3) Duration(s DurationString) elBuilder3 {
-	d := internal.ParseDuration(string(s))
+	d := parse.ParseDuration(string(s))
 	b.entityListener.delay = d
 	return b
 }
 
 func (b elBuilder3) Throttle(s DurationString) elBuilder3 {
-	d := internal.ParseDuration(string(s))
+	d := parse.ParseDuration(string(s))
 	b.entityListener.throttle = d
 	return b
 }

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Xevion/gome-assistant/internal"
+	"github.com/Xevion/gome-assistant/internal/parse"
 	"github.com/golang-module/carbon"
 )
 
@@ -16,8 +17,8 @@ func checkWithinTimeRange(startTime, endTime string) conditionCheck {
 	// if betweenStart and betweenEnd both set, first account for midnight
 	// overlap, then check if between those times.
 	if startTime != "" && endTime != "" {
-		parsedStart := internal.ParseTime(startTime)
-		parsedEnd := internal.ParseTime(endTime)
+		parsedStart := parse.ParseTime(startTime)
+		parsedEnd := parse.ParseTime(endTime)
 
 		// check for midnight overlap
 		if parsedEnd.Lt(parsedStart) { // example turn on night lights when motion from 23:00 to 07:00
@@ -34,9 +35,9 @@ func checkWithinTimeRange(startTime, endTime string) conditionCheck {
 		}
 
 		// otherwise just check individual before/after
-	} else if startTime != "" && internal.ParseTime(startTime).IsFuture() {
+	} else if startTime != "" && parse.ParseTime(startTime).IsFuture() {
 		cc.fail = true
-	} else if endTime != "" && internal.ParseTime(endTime).IsPast() {
+	} else if endTime != "" && parse.ParseTime(endTime).IsPast() {
 		cc.fail = true
 	}
 	return cc
@@ -168,7 +169,7 @@ func checkStartEndTime(s TimeString, isStart bool) conditionCheck {
 	}
 
 	now := time.Now()
-	parsedTime := internal.ParseTime(string(s)).Carbon2Time()
+	parsedTime := parse.ParseTime(string(s)).Carbon2Time()
 	if isStart {
 		if parsedTime.After(now) {
 			cc.fail = true
