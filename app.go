@@ -195,24 +195,29 @@ func (a *App) Cleanup() {
 // It cancels the context, closes the websocket connection,
 // and ensures all background processes are properly terminated.
 func (a *App) Close() error {
+	// Close websocket connection if it exists
+	if a.conn != nil {
+		deadline := time.Now().Add(10 * time.Second)
+		err := a.conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), deadline)
+		if err != nil {
+			slog.Warn("Error writing close message", "error", err)
+			return err
+		}
+
+		// Close the websocket connection
+		err = a.conn.Close()
+		if err != nil {
+			slog.Warn("Error closing websocket connection", "error", err)
+			return err
+		}
+	}
+
+	// Wait a short time for the websocket connection to close
+	time.Sleep(500 * time.Millisecond)
+
 	// Cancel context to signal all goroutines to stop
 	if a.ctxCancel != nil {
 		a.ctxCancel()
-	}
-
-	// Close websocket connection if it exists
-	if a.conn != nil {
-		// Send close message to Home Assistant
-		closeMsg := map[string]string{
-			"type": "close",
-		}
-		_ = a.conn.WriteJSON(closeMsg)
-
-		// Close the websocket connection
-		err := a.conn.Close()
-		if err != nil {
-			slog.Warn("Error closing websocket connection", "error", err)
-		}
 	}
 
 	// Wait a short time for goroutines to finish
@@ -373,7 +378,7 @@ func (a *App) Start() {
 	}
 
 	// entity listeners and event listeners
-	elChan := make(chan ws.ChanMsg)
+	elChan := make(chan ws.ChanMsg, 100) // Add buffer to prevent channel overflow
 	go ws.ListenWebsocket(a.conn, elChan)
 
 	for {

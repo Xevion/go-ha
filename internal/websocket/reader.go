@@ -50,7 +50,9 @@ func ListenWebsocket(conn *websocket.Conn, c chan ChanMsg) {
 			// Message sent successfully
 		default:
 			// Channel is full or closed, break out of loop
-			slog.Warn("Websocket message channel is full or closed, stopping listener")
+			slog.Warn("Websocket message channel is full or closed, stopping listener",
+				"channel_capacity", cap(c),
+				"channel_length", len(c))
 			close(c)
 			return
 		}
