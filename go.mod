@@ -9,6 +9,7 @@ require (
 	github.com/nathan-osman/go-sunrise v1.1.0
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
+	resty.dev/v3 v3.0.0-beta.3
 )
 
 require (
@@ -19,4 +20,5 @@ require (
 	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
 )

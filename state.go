@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang-module/carbon"
 
-	"github.com/Xevion/gome-assistant/internal/http"
+	internal "github.com/Xevion/gome-assistant/internal"
 )
 
 type State interface {
@@ -23,7 +23,7 @@ type State interface {
 
 // State is used to retrieve state from Home Assistant.
 type StateImpl struct {
-	httpClient *http.HttpClient
+	httpClient *internal.HttpClient
 	latitude   float64
 	longitude  float64
 }
@@ -35,7 +35,7 @@ type EntityState struct {
 	LastChanged time.Time      `json:"last_changed"`
 }
 
-func newState(c *http.HttpClient, homeZoneEntityId string) (*StateImpl, error) {
+func newState(c *internal.HttpClient, homeZoneEntityId string) (*StateImpl, error) {
 	state := &StateImpl{httpClient: c}
 
 	// Ensure the zone exists and has required attributes

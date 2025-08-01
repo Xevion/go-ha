@@ -14,8 +14,7 @@ import (
 	sunriseLib "github.com/nathan-osman/go-sunrise"
 
 	"github.com/Workiva/go-datastructures/queue"
-	"github.com/Xevion/gome-assistant/internal"
-	"github.com/Xevion/gome-assistant/internal/http"
+	internal "github.com/Xevion/gome-assistant/internal"
 	"github.com/Xevion/gome-assistant/internal/parse"
 	ws "github.com/Xevion/gome-assistant/internal/websocket"
 )
@@ -30,7 +29,7 @@ type App struct {
 	// Wraps the ws connection with added mutex locking
 	wsWriter *ws.WebsocketWriter
 
-	httpClient *http.HttpClient
+	httpClient *internal.HttpClient
 
 	service *Service
 	state   *StateImpl
@@ -148,19 +147,8 @@ func NewApp(request NewAppRequest) (*App, error) {
 		var err error
 		baseURL, err = url.Parse(request.URL)
 		if err != nil {
-			return nil, ErrInvalidArgs
+			return nil, fmt.Errorf("failed to parse URL: %w", err)
 		}
-	} else {
-		// This is deprecated and will be removed in a future release
-		port := request.Port
-		if port == "" {
-			port = "8123"
-		}
-		baseURL.Scheme = "http"
-		if request.Secure {
-			baseURL.Scheme = "https"
-		}
-		baseURL.Host = request.IpAddress + ":" + port
 	}
 
 	conn, ctx, ctxCancel, err := ws.ConnectionFromUri(baseURL, request.HAAuthToken)
@@ -171,7 +159,7 @@ func NewApp(request NewAppRequest) (*App, error) {
 		return nil, err
 	}
 
-	httpClient := http.NewHttpClient(baseURL, request.HAAuthToken)
+	httpClient := internal.NewHttpClient(baseURL, request.HAAuthToken)
 
 	wsWriter := &ws.WebsocketWriter{Conn: conn}
 	service := newService(wsWriter)
