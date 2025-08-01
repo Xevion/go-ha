@@ -3,10 +3,11 @@ module github.com/Xevion/gome-assistant
 go 1.21
 
 require (
+	github.com/Workiva/go-datastructures v1.1.5
 	github.com/golang-module/carbon v1.7.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/nathan-osman/go-sunrise v1.1.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

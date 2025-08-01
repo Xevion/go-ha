@@ -13,9 +13,9 @@ import (
 	"github.com/gorilla/websocket"
 	sunriseLib "github.com/nathan-osman/go-sunrise"
 
+	"github.com/Workiva/go-datastructures/queue"
 	"github.com/Xevion/gome-assistant/internal"
 	"github.com/Xevion/gome-assistant/internal/http"
-	pq "github.com/Xevion/gome-assistant/internal/priority_queue"
 	ws "github.com/Xevion/gome-assistant/internal/websocket"
 )
 
@@ -34,11 +34,25 @@ type App struct {
 	service *Service
 	state   *StateImpl
 
-	schedules         pq.PriorityQueue
-	intervals         pq.PriorityQueue
+	schedules         *queue.PriorityQueue
+	intervals         *queue.PriorityQueue
 	entityListeners   map[string][]*EntityListener
 	entityListenersId int64
 	eventListeners    map[string][]*EventListener
+}
+
+type Item struct {
+	Value    interface{}
+	Priority float64
+}
+
+func (mi Item) Compare(other queue.Item) int {
+	if mi.Priority > other.(Item).Priority {
+		return 1
+	} else if mi.Priority == other.(Item).Priority {
+		return 0
+	}
+	return -1
 }
 
 // DurationString represents a duration, such as "2s" or "24h".
@@ -178,8 +192,8 @@ func NewApp(request NewAppRequest) (*App, error) {
 		httpClient:      httpClient,
 		service:         service,
 		state:           state,
-		schedules:       pq.New(),
-		intervals:       pq.New(),
+		schedules:       queue.NewPriorityQueue(100, false),
+		intervals:       queue.NewPriorityQueue(100, false),
 		entityListeners: map[string][]*EntityListener{},
 		eventListeners:  map[string][]*EventListener{},
 	}, nil
@@ -232,7 +246,7 @@ func (a *App) RegisterSchedules(schedules ...DailySchedule) {
 		// realStartTime already set for sunset/sunrise
 		if s.isSunrise || s.isSunset {
 			s.nextRunTime = getNextSunRiseOrSet(a, s.isSunrise, s.sunOffset).Carbon2Time()
-			a.schedules.Insert(s, float64(s.nextRunTime.Unix()))
+			a.schedules.Put()
 			continue
 		}
 
@@ -245,7 +259,10 @@ func (a *App) RegisterSchedules(schedules ...DailySchedule) {
 		}
 
 		s.nextRunTime = startTime.Carbon2Time()
-		a.schedules.Insert(s, float64(startTime.Carbon2Time().Unix()))
+		a.schedules.Put(Item{
+			Value:    s,
+			Priority: float64(startTime.Carbon2Time().Unix()),
+		})
 	}
 }
 
@@ -261,7 +278,10 @@ func (a *App) RegisterIntervals(intervals ...Interval) {
 		for i.nextRunTime.Before(now) {
 			i.nextRunTime = i.nextRunTime.Add(i.frequency)
 		}
-		a.intervals.Insert(i, float64(i.nextRunTime.Unix()))
+		a.intervals.Put(Item{
+			Value:    i,
+			Priority: float64(i.nextRunTime.Unix()),
+		})
 	}
 }
 

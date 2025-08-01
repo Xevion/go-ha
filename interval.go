@@ -206,12 +206,15 @@ func (i Interval) maybeRunCallback(a *App) {
 }
 
 func popInterval(a *App) Interval {
-	i, _ := a.intervals.Pop()
-	return i.(Interval)
+	i, _ := a.intervals.Get(1)
+	return i[0].(Item).Value.(Interval)
 }
 
 func requeueInterval(a *App, i Interval) {
 	i.nextRunTime = i.nextRunTime.Add(i.frequency)
 
-	a.intervals.Insert(i, float64(i.nextRunTime.Unix()))
+	a.intervals.Put(Item{
+		Value:    i,
+		Priority: float64(i.nextRunTime.Unix()),
+	})
 }

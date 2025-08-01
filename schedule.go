@@ -208,8 +208,8 @@ func (s DailySchedule) maybeRunCallback(a *App) {
 }
 
 func popSchedule(a *App) DailySchedule {
-	_sched, _ := a.schedules.Pop()
-	return _sched.(DailySchedule)
+	_sched, _ := a.schedules.Get(1)
+	return _sched[0].(Item).Value.(DailySchedule)
 }
 
 func requeueSchedule(a *App, s DailySchedule) {
@@ -227,5 +227,8 @@ func requeueSchedule(a *App, s DailySchedule) {
 		s.nextRunTime = carbon.Time2Carbon(s.nextRunTime).AddDay().Carbon2Time()
 	}
 
-	a.schedules.Insert(s, float64(s.nextRunTime.Unix()))
+	a.schedules.Put(Item{
+		Value:    s,
+		Priority: float64(s.nextRunTime.Unix()),
+	})
 }
