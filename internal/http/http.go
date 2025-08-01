@@ -70,34 +70,3 @@ func get(url, token string) ([]byte, error) {
 
 	return body, nil
 }
-
-// func post(url string, token string, data any) ([]byte, error) {
-// 	postBody, err := json.Marshal(data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	req, err := http.NewRequest("GET", url, bytes.NewBuffer(postBody))
-// 	if err != nil {
-// 		return nil, errors.New("Error building post request: " + err.Error())
-// 	}
-
-// 	req.Header.Add("Authorization", "Bearer "+token)
-
-// 	client := &http.Client{}
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		return nil, errors.New("Error in post response: " + err.Error())
-// 	}
-// 	defer resp.Body.Close()
-
-// 	if resp.StatusCode == 401 {
-// 		panic("ERROR: Auth token is invalid. Please double check it or create a new token in your Home Assistant profile")
-// 	}
-
-// 	body, err := io.ReadAll(resp.Body)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	return body, nil
-// }
