@@ -45,13 +45,15 @@ type BaseServiceRequest struct {
 }
 
 func NewBaseServiceRequest(entityId string) BaseServiceRequest {
-	bsr := BaseServiceRequest{
 	id := internal.NextId()
+	request := BaseServiceRequest{
 		Id:          id,
 		RequestType: "call_service",
 	}
+
 	if entityId != "" {
-		bsr.Target.EntityId = entityId
+		request.Target.EntityId = entityId
 	}
-	return bsr
+
+	return request
 }
