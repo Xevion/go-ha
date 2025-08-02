@@ -47,3 +47,7 @@ func GetEquivalentWebsocketScheme(scheme string) (string, error) {
 		return "", fmt.Errorf("unexpected scheme: %s", scheme)
 	}
 }
+
+func Ptr[T any](v T) *T {
+	return &v
+}
