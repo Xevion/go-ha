@@ -67,7 +67,7 @@ func toCamelCase(s string) string {
 	return result.String()
 }
 
-// validateHomeZone verifies that the home zone entity exists and is valid
+// validateHomeZone verifies that the home zone entity exists and is valid.
 func validateHomeZone(state ha.State, entityID string) error {
 	entity, err := state.Get(entityID)
 	if err != nil {
@@ -93,7 +93,7 @@ func validateHomeZone(state ha.State, entityID string) error {
 	return nil
 }
 
-// generate creates the entities.go file with constants for all Home Assistant entities
+// generate creates the entities.go file with constants for all Home Assistant entities.
 func generate(config Config) error {
 	if config.HomeZoneEntityId == "" {
 		config.HomeZoneEntityId = "zone.home"

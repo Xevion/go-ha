@@ -79,20 +79,20 @@ func (ib intervalBuilder) Call(callback IntervalCallback) intervalBuilderCall {
 	return intervalBuilderCall(ib)
 }
 
-// Takes a DurationString ("2h", "5m", etc) to set the frequency of the interval.
+// Every takes a DurationString ("2h", "5m", etc.) to set the frequency of the interval.
 func (ib intervalBuilderCall) Every(s types.DurationString) intervalBuilderEnd {
 	d := internal.ParseDuration(string(s))
 	ib.interval.frequency = d
 	return intervalBuilderEnd(ib)
 }
 
-// Takes a TimeString ("HH:MM") when this interval will start running for the day.
+// StartingAt takes a TimeString ("HH:MM") when this interval will start running for the day.
 func (ib intervalBuilderEnd) StartingAt(s types.TimeString) intervalBuilderEnd {
 	ib.interval.startTime = s
 	return ib
 }
 
-// Takes a TimeString ("HH:MM") when this interval will stop running for the day.
+// EndingAt takes a TimeString ("HH:MM") when this interval will stop running for the day.
 func (ib intervalBuilderEnd) EndingAt(s types.TimeString) intervalBuilderEnd {
 	ib.interval.endTime = s
 	return ib
@@ -111,10 +111,8 @@ func (ib intervalBuilderEnd) ExceptionRange(start, end time.Time) intervalBuilde
 	return ib
 }
 
-/*
-Enable this interval only when the current state of {entityId} matches {state}.
-If there is a network error while retrieving state, the interval runs if {runOnNetworkError} is true.
-*/
+// Enable this interval only when the current state of {entityId} matches {state}.
+// If there is a network error while retrieving state, the interval runs if {runOnNetworkError} is true.
 func (ib intervalBuilderEnd) EnabledWhen(entityId, state string, runOnNetworkError bool) intervalBuilderEnd {
 	if entityId == "" {
 		panic(fmt.Sprintf("entityId is empty in EnabledWhen entityId='%s' state='%s'", entityId, state))
@@ -128,10 +126,8 @@ func (ib intervalBuilderEnd) EnabledWhen(entityId, state string, runOnNetworkErr
 	return ib
 }
 
-/*
-Disable this interval when the current state of {entityId} matches {state}.
-If there is a network error while retrieving state, the interval runs if {runOnNetworkError} is true.
-*/
+// Disable this interval when the current state of {entityId} matches {state}.
+// If there is a network error while retrieving state, the interval runs if {runOnNetworkError} is true.
 func (ib intervalBuilderEnd) DisabledWhen(entityId, state string, runOnNetworkError bool) intervalBuilderEnd {
 	if entityId == "" {
 		panic(fmt.Sprintf("entityId is empty in EnabledWhen entityId='%s' state='%s'", entityId, state))
@@ -188,10 +184,10 @@ func runIntervals(a *App) {
 }
 
 func (i Interval) maybeRunCallback(a *App) {
-	if c := CheckStartEndTime(i.startTime /* isStart = */, true); c.fail {
+	if c := CheckStartEndTime(i.startTime, true); c.fail {
 		return
 	}
-	if c := CheckStartEndTime(i.endTime /* isStart = */, false); c.fail {
+	if c := CheckStartEndTime(i.endTime, false); c.fail {
 		return
 	}
 	if c := CheckExceptionDates(i.exceptionDates); c.fail {

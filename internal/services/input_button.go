@@ -8,6 +8,7 @@ type InputButton struct {
 	conn *connect.HAConnection
 }
 
+// Press presses an input button entity.
 func (ib InputButton) Press(entityId string) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "input_button"

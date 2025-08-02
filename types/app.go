@@ -7,7 +7,7 @@ type NewAppRequest struct {
 
 	// Optional
 	// Deprecated: use URL instead
-	// IpAddress of your Home Assistant instance i.e. "localhost"
+	// IpAddress of your Home Assistant instance, e.g. "localhost"
 	// or "192.168.86.59" etc.
 	IpAddress string
 
@@ -18,18 +18,18 @@ type NewAppRequest struct {
 
 	// Required
 	// Auth token generated in Home Assistant. Used
-	// to connect to the Websocket API.
+	// to connect to the WebSocket API.
 	HAAuthToken string
 
 	// Required
-	// EntityId of the zone representing your home e.g. "zone.home".
+	// EntityId of the zone representing your home, e.g. "zone.home".
 	// Used to pull latitude/longitude from Home Assistant
 	// to calculate sunset/sunrise times.
 	HomeZoneEntityId string
 
 	// Optional
-	// Whether to use secure connections for http and websockets.
-	// Setting this to `true` will use `https://` instead of `https://`
+	// Whether to use secure connections for HTTP and WebSockets.
+	// Setting this to `true` will use `https://` instead of `http://`
 	// and `wss://` instead of `ws://`.
 	Secure bool
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// BaseMessage is the base message type for all messages sent by the websocket server.
+// BaseMessage is the base message type for all messages sent by the WebSocket server.
 type BaseMessage struct {
 	Type    string `json:"type"`
 	Id      int64  `json:"id"`
@@ -21,14 +21,14 @@ type ChannelMessage struct {
 	Raw     []byte
 }
 
-// ListenWebsocket reads messages from the websocket connection and sends them to the channel.
+// ListenWebsocket reads messages from the WebSocket connection and sends them to the channel.
 // It will close the channel if it encounters an error, or if the channel is full, and return.
 // It ignores errors in deserialization.
 func ListenWebsocket(conn *websocket.Conn, c chan ChannelMessage) {
 	for {
 		raw, err := ReadMessageRaw(conn)
 		if err != nil {
-			slog.Error("Error reading from websocket", "err", err)
+			slog.Error("Error reading from WebSocket", "err", err)
 			close(c)
 			break
 		}
@@ -60,7 +60,7 @@ func ListenWebsocket(conn *websocket.Conn, c chan ChannelMessage) {
 			// Message sent successfully
 		default:
 			// Channel is full or closed, break out of loop
-			slog.Warn("Websocket message channel is full or closed, stopping listener",
+			slog.Warn("WebSocket message channel is full or closed, stopping listener",
 				"channel_capacity", cap(c),
 				"channel_length", len(c))
 			close(c)

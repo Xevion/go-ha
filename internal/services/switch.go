@@ -8,6 +8,7 @@ type Switch struct {
 	conn *connect.HAConnection
 }
 
+// TurnOn turns on a switch entity.
 func (s Switch) TurnOn(entityId string) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "switch"
@@ -16,6 +17,7 @@ func (s Switch) TurnOn(entityId string) error {
 	return s.conn.WriteMessage(req)
 }
 
+// Toggle toggles a switch entity.
 func (s Switch) Toggle(entityId string) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "switch"
@@ -24,6 +26,7 @@ func (s Switch) Toggle(entityId string) error {
 	return s.conn.WriteMessage(req)
 }
 
+// TurnOff turns off a switch entity.
 func (s Switch) TurnOff(entityId string) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "switch"

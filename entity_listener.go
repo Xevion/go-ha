@@ -67,8 +67,6 @@ type msgState struct {
 	Attributes  map[string]any `json:"attributes"`
 }
 
-/* Methods */
-
 func NewEntityListener() elBuilder1 {
 	return elBuilder1{EntityListener{
 		lastRan: carbon.Now().StartOfCentury(),
@@ -154,10 +152,8 @@ func (b elBuilder3) RunOnStartup() elBuilder3 {
 	return b
 }
 
-/*
-Enable this listener only when the current state of {entityId} matches {state}.
-If there is a network error while retrieving state, the listener runs if {runOnNetworkError} is true.
-*/
+// EnabledWhen enables this listener only when the current state of {entityId} matches {state}.
+// If there is a network error while retrieving state, the listener runs if {runOnNetworkError} is true.
 func (b elBuilder3) EnabledWhen(entityId, state string, runOnNetworkError bool) elBuilder3 {
 	if entityId == "" {
 		panic(fmt.Sprintf("entityId is empty in EnabledWhen entityId='%s' state='%s'", entityId, state))
@@ -171,10 +167,8 @@ func (b elBuilder3) EnabledWhen(entityId, state string, runOnNetworkError bool) 
 	return b
 }
 
-/*
-Disable this listener when the current state of {entityId} matches {state}.
-If there is a network error while retrieving state, the listener runs if {runOnNetworkError} is true.
-*/
+// DisabledWhen disables this listener when the current state of {entityId} matches {state}.
+// If there is a network error while retrieving state, the listener runs if {runOnNetworkError} is true.
 func (b elBuilder3) DisabledWhen(entityId, state string, runOnNetworkError bool) elBuilder3 {
 	if entityId == "" {
 		panic(fmt.Sprintf("entityId is empty in EnabledWhen entityId='%s' state='%s'", entityId, state))

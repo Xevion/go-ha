@@ -8,9 +8,7 @@ type AlarmControlPanel struct {
 	conn *connect.HAConnection
 }
 
-// Send the alarm the command for arm away.
-// Takes an entityId and an optional
-// map that is translated into service_data.
+// Send the alarm the command for arm away. Takes an entityId and an optional map that is translated into service_data.
 func (acp AlarmControlPanel) ArmAway(entityId string, serviceData ...map[string]any) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "alarm_control_panel"
@@ -22,9 +20,7 @@ func (acp AlarmControlPanel) ArmAway(entityId string, serviceData ...map[string]
 	return acp.conn.WriteMessage(req)
 }
 
-// Send the alarm the command for arm away.
-// Takes an entityId and an optional
-// map that is translated into service_data.
+// Send the alarm the command for arm away. Takes an entityId and an optional map that is translated into service_data.
 func (acp AlarmControlPanel) ArmWithCustomBypass(entityId string, serviceData ...map[string]any) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "alarm_control_panel"
@@ -36,9 +32,7 @@ func (acp AlarmControlPanel) ArmWithCustomBypass(entityId string, serviceData ..
 	return acp.conn.WriteMessage(req)
 }
 
-// Send the alarm the command for arm home.
-// Takes an entityId and an optional
-// map that is translated into service_data.
+// Send the alarm the command for arm home. Takes an entityId and an optional map that is translated into service_data.
 func (acp AlarmControlPanel) ArmHome(entityId string, serviceData ...map[string]any) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "alarm_control_panel"
@@ -50,9 +44,7 @@ func (acp AlarmControlPanel) ArmHome(entityId string, serviceData ...map[string]
 	return acp.conn.WriteMessage(req)
 }
 
-// Send the alarm the command for arm night.
-// Takes an entityId and an optional
-// map that is translated into service_data.
+// Send the alarm the command for arm night. Takes an entityId and an optional map that is translated into service_data.
 func (acp AlarmControlPanel) ArmNight(entityId string, serviceData ...map[string]any) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "alarm_control_panel"
@@ -64,9 +56,7 @@ func (acp AlarmControlPanel) ArmNight(entityId string, serviceData ...map[string
 	return acp.conn.WriteMessage(req)
 }
 
-// Send the alarm the command for arm vacation.
-// Takes an entityId and an optional
-// map that is translated into service_data.
+// Send the alarm the command for arm vacation. Takes an entityId and an optional map that is translated into service_data.
 func (acp AlarmControlPanel) ArmVacation(entityId string, serviceData ...map[string]any) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "alarm_control_panel"
@@ -78,9 +68,7 @@ func (acp AlarmControlPanel) ArmVacation(entityId string, serviceData ...map[str
 	return acp.conn.WriteMessage(req)
 }
 
-// Send the alarm the command for disarm.
-// Takes an entityId and an optional
-// map that is translated into service_data.
+// Send the alarm the command for disarm. Takes an entityId and an optional map that is translated into service_data.
 func (acp AlarmControlPanel) Disarm(entityId string, serviceData ...map[string]any) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "alarm_control_panel"
@@ -92,9 +80,7 @@ func (acp AlarmControlPanel) Disarm(entityId string, serviceData ...map[string]a
 	return acp.conn.WriteMessage(req)
 }
 
-// Send the alarm the command for trigger.
-// Takes an entityId and an optional
-// map that is translated into service_data.
+// Send the alarm the command for trigger. Takes an entityId and an optional map that is translated into service_data.
 func (acp AlarmControlPanel) Trigger(entityId string, serviceData ...map[string]any) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "alarm_control_panel"

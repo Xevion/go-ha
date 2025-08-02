@@ -8,6 +8,7 @@ type InputBoolean struct {
 	conn *connect.HAConnection
 }
 
+// TurnOn turns on an input boolean entity.
 func (ib InputBoolean) TurnOn(entityId string) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "input_boolean"
@@ -16,6 +17,7 @@ func (ib InputBoolean) TurnOn(entityId string) error {
 	return ib.conn.WriteMessage(req)
 }
 
+// Toggle toggles an input boolean entity.
 func (ib InputBoolean) Toggle(entityId string) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "input_boolean"
@@ -24,6 +26,7 @@ func (ib InputBoolean) Toggle(entityId string) error {
 	return ib.conn.WriteMessage(req)
 }
 
+// TurnOff turns off an input boolean entity.
 func (ib InputBoolean) TurnOff(entityId string) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "input_boolean"

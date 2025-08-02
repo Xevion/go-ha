@@ -44,8 +44,7 @@ func (c Cover) OpenTilt(entityId string) error {
 	return c.conn.WriteMessage(req)
 }
 
-// Move to specific position all or specified cover. Takes an entityId and an optional
-// map that is translated into service_data.
+// Move to specific position all or specified cover. Takes an entityId and an optional map that is translated into service_data.
 func (c Cover) SetPosition(entityId string, serviceData ...map[string]any) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "cover"
@@ -57,8 +56,7 @@ func (c Cover) SetPosition(entityId string, serviceData ...map[string]any) error
 	return c.conn.WriteMessage(req)
 }
 
-// Move to specific position all or specified cover tilt. Takes an entityId and an optional
-// map that is translated into service_data.
+// Move to specific position all or specified cover tilt. Takes an entityId and an optional map that is translated into service_data.
 func (c Cover) SetTiltPosition(entityId string, serviceData ...map[string]any) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "cover"

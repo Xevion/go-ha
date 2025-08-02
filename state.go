@@ -81,7 +81,7 @@ func (s *StateImpl) Get(entityId string) (EntityState, error) {
 }
 
 // ListEntities returns a list of all entities in Home Assistant.
-// see rest documentation for more details: https://developers.home-assistant.io/docs/api/rest/#actions
+// See REST documentation for more details: https://developers.home-assistant.io/docs/api/rest/#actions
 func (s *StateImpl) ListEntities() ([]EntityState, error) {
 	resp, err := s.httpClient.GetStates()
 	if err != nil {
@@ -101,7 +101,7 @@ func (s *StateImpl) Equals(entityId string, expectedState string) (bool, error) 
 }
 
 func (s *StateImpl) BeforeSunrise(offset ...types.DurationString) bool {
-	sunrise := getSunriseSunset(s /* sunrise = */, true, carbon.Now(), offset...)
+	sunrise := getSunriseSunset(s, true, carbon.Now(), offset...)
 	return carbon.Now().Lt(sunrise)
 }
 
@@ -110,7 +110,7 @@ func (s *StateImpl) AfterSunrise(offset ...types.DurationString) bool {
 }
 
 func (s *StateImpl) BeforeSunset(offset ...types.DurationString) bool {
-	sunset := getSunriseSunset(s /* sunrise = */, false, carbon.Now(), offset...)
+	sunset := getSunriseSunset(s, false, carbon.Now(), offset...)
 	return carbon.Now().Lt(sunset)
 }
 

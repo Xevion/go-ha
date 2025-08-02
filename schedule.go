@@ -83,8 +83,7 @@ func (sb scheduleBuilderCall) At(s string) scheduleBuilderEnd {
 }
 
 // Sunrise takes an optional duration string that is passed to time.ParseDuration.
-// Examples include "-1.5h", "30m", etc. See https://pkg.go.dev/time#ParseDuration
-// for full list.
+// Examples include "-1.5h", "30m", etc. See https://pkg.go.dev/time#ParseDuration for the full list.
 func (sb scheduleBuilderCall) Sunrise(offset ...types.DurationString) scheduleBuilderEnd {
 	sb.schedule.isSunrise = true
 	if len(offset) > 0 {
@@ -94,8 +93,7 @@ func (sb scheduleBuilderCall) Sunrise(offset ...types.DurationString) scheduleBu
 }
 
 // Sunset takes an optional duration string that is passed to time.ParseDuration.
-// Examples include "-1.5h", "30m", etc. See https://pkg.go.dev/time#ParseDuration
-// for full list.
+// Examples include "-1.5h", "30m", etc. See https://pkg.go.dev/time#ParseDuration for the full list.
 func (sb scheduleBuilderCall) Sunset(offset ...types.DurationString) scheduleBuilderEnd {
 	sb.schedule.isSunset = true
 	if len(offset) > 0 {
@@ -114,10 +112,8 @@ func (sb scheduleBuilderEnd) OnlyOnDates(t time.Time, tl ...time.Time) scheduleB
 	return sb
 }
 
-/*
-Enable this schedule only when the current state of {entityId} matches {state}.
-If there is a network error while retrieving state, the schedule runs if {runOnNetworkError} is true.
-*/
+// EnabledWhen enables this schedule only when the current state of {entityId} matches {state}.
+// If there is a network error while retrieving state, the schedule runs if {runOnNetworkError} is true.
 func (sb scheduleBuilderEnd) EnabledWhen(entityId, state string, runOnNetworkError bool) scheduleBuilderEnd {
 	if entityId == "" {
 		panic(fmt.Sprintf("entityId is empty in EnabledWhen entityId='%s' state='%s'", entityId, state))
@@ -131,10 +127,8 @@ func (sb scheduleBuilderEnd) EnabledWhen(entityId, state string, runOnNetworkErr
 	return sb
 }
 
-/*
-Disable this schedule when the current state of {entityId} matches {state}.
-If there is a network error while retrieving state, the schedule runs if {runOnNetworkError} is true.
-*/
+// DisabledWhen disables this schedule when the current state of {entityId} matches {state}.
+// If there is a network error while retrieving state, the schedule runs if {runOnNetworkError} is true.
 func (sb scheduleBuilderEnd) DisabledWhen(entityId, state string, runOnNetworkError bool) scheduleBuilderEnd {
 	if entityId == "" {
 		panic(fmt.Sprintf("entityId is empty in EnabledWhen entityId='%s' state='%s'", entityId, state))

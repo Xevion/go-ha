@@ -8,8 +8,7 @@ type Light struct {
 	conn *connect.HAConnection
 }
 
-// TurnOn a light entity. Takes an entityId and an optional
-// map that is translated into service_data.
+// TurnOn a light entity. Takes an entityId and an optional map that is translated into service_data.
 func (l Light) TurnOn(entityId string, serviceData ...map[string]any) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "light"
@@ -21,8 +20,7 @@ func (l Light) TurnOn(entityId string, serviceData ...map[string]any) error {
 	return l.conn.WriteMessage(req)
 }
 
-// Toggle a light entity. Takes an entityId and an optional
-// map that is translated into service_data.
+// Toggle a light entity. Takes an entityId and an optional map that is translated into service_data.
 func (l Light) Toggle(entityId string, serviceData ...map[string]any) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "light"
@@ -34,6 +32,7 @@ func (l Light) Toggle(entityId string, serviceData ...map[string]any) error {
 	return l.conn.WriteMessage(req)
 }
 
+// TurnOff turns off a light entity.
 func (l Light) TurnOff(entityId string) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "light"

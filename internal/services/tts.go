@@ -17,9 +17,7 @@ func (tts TTS) ClearCache() error {
 	return tts.conn.WriteMessage(req)
 }
 
-// Say something using text-to-speech on a media player with cloud.
-// Takes an entityId and an optional
-// map that is translated into service_data.
+// Say something using text-to-speech on a media player with cloud. Takes an entityId and an optional map that is translated into service_data.
 func (tts TTS) CloudSay(entityId string, serviceData ...map[string]any) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "tts"
@@ -31,9 +29,7 @@ func (tts TTS) CloudSay(entityId string, serviceData ...map[string]any) error {
 	return tts.conn.WriteMessage(req)
 }
 
-// Say something using text-to-speech on a media player with google_translate.
-// Takes an entityId and an optional
-// map that is translated into service_data.
+// Say something using text-to-speech on a media player with google_translate. Takes an entityId and an optional map that is translated into service_data.
 func (tts TTS) GoogleTranslateSay(entityId string, serviceData ...map[string]any) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "tts"

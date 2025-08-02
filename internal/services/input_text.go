@@ -8,6 +8,7 @@ type InputText struct {
 	conn *connect.HAConnection
 }
 
+// Set sets the value of an input text entity.
 func (ib InputText) Set(entityId string, value string) error {
 	req := NewBaseServiceRequest(entityId)
 	req.Domain = "input_text"

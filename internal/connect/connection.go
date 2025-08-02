@@ -1,7 +1,3 @@
-// Package websocket is used to interact with the Home Assistant
-// websocket API. All HA interaction is done via websocket
-// except for cases explicitly called out in http package
-// documentation.
 package connect
 
 import (
@@ -20,13 +16,13 @@ import (
 
 var ErrInvalidToken = errors.New("invalid authentication token")
 
-// HAConnection is a wrapper around a websocket connection that provides a mutex for thread safety.
+// HAConnection is a wrapper around a WebSocket connection that provides a mutex for thread safety.
 type HAConnection struct {
 	Conn  *websocket.Conn // Note: this is not thread safe except for Close() and WriteControl()
 	mutex sync.Mutex
 }
 
-// WriteMessage writes a message to the websocket connection.
+// WriteMessage writes a message to the WebSocket connection.
 func (w *HAConnection) WriteMessage(msg any) error {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
@@ -34,7 +30,7 @@ func (w *HAConnection) WriteMessage(msg any) error {
 	return w.Conn.WriteJSON(msg)
 }
 
-// ReadMessageRaw reads a raw message from the websocket connection.
+// ReadMessageRaw reads a raw message from the WebSocket connection.
 func ReadMessageRaw(conn *websocket.Conn) ([]byte, error) {
 	_, msg, err := conn.ReadMessage()
 	if err != nil {
@@ -43,7 +39,7 @@ func ReadMessageRaw(conn *websocket.Conn) ([]byte, error) {
 	return msg, nil
 }
 
-// ReadMessage reads a message from the websocket connection and unmarshals it into the given type.
+// ReadMessage reads a message from the WebSocket connection and unmarshals it into the given type.
 func ReadMessage[T any](conn *websocket.Conn) (T, error) {
 	var result T
 	_, msg, err := conn.ReadMessage()
@@ -59,14 +55,14 @@ func ReadMessage[T any](conn *websocket.Conn) (T, error) {
 	return result, nil
 }
 
-// ConnectionFromUri creates a new websocket connection from the given base URL and authentication token.
+// ConnectionFromUri creates a new WebSocket connection from the given base URL and authentication token.
 func ConnectionFromUri(baseUrl *url.URL, token string) (*HAConnection, context.Context, context.CancelFunc, error) {
-	// Build the websocket URL
+	// Build the WebSocket URL
 	urlWebsockets := *baseUrl
 	urlWebsockets.Path = "/api/websocket"
 	scheme, err := internal.GetEquivalentWebsocketScheme(baseUrl.Scheme)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to build websocket URL: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to build WebSocket URL: %w", err)
 	}
 	urlWebsockets.Scheme = scheme
 
@@ -74,11 +70,11 @@ func ConnectionFromUri(baseUrl *url.URL, token string) (*HAConnection, context.C
 	connCtx, connCtxCancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer connCtxCancel() // Always cancel the connection context when we're done
 
-	// Init websocket connection
+	// Init WebSocket connection
 	dialer := websocket.DefaultDialer
 	conn, _, err := dialer.DialContext(connCtx, urlWebsockets.String(), nil)
 	if err != nil {
-		slog.Error("Failed to connect to websocket. Check URI\n", "url", urlWebsockets)
+		slog.Error("Failed to connect to WebSocket. Check URI\n", "url", urlWebsockets)
 		return nil, nil, nil, err
 	}
 
@@ -87,7 +83,7 @@ func ConnectionFromUri(baseUrl *url.URL, token string) (*HAConnection, context.C
 		MsgType string `json:"type"`
 	}](conn)
 	if err != nil {
-		slog.Error("Unknown error creating websocket client\n")
+		slog.Error("Unknown error creating WebSocket client\n")
 		return nil, nil, nil, err
 	} else if msg.MsgType != "auth_required" {
 		slog.Error("Expected auth_required message, got", "msgType", msg.MsgType)
@@ -97,7 +93,7 @@ func ConnectionFromUri(baseUrl *url.URL, token string) (*HAConnection, context.C
 	// Send auth message
 	err = SendAuthMessage(conn, connCtx, token)
 	if err != nil {
-		slog.Error("Unknown error creating websocket client\n")
+		slog.Error("Unknown error creating WebSocket client\n")
 		return nil, nil, nil, err
 	}
 
@@ -114,7 +110,7 @@ func ConnectionFromUri(baseUrl *url.URL, token string) (*HAConnection, context.C
 	return &HAConnection{Conn: conn}, appCtx, appCtxCancel, nil
 }
 
-// SendAuthMessage sends an auth message to the websocket connection.
+// SendAuthMessage sends an auth message to the WebSocket connection.
 func SendAuthMessage(conn *websocket.Conn, ctx context.Context, token string) error {
 	type AuthMessage struct {
 		MsgType     string `json:"type"`
@@ -174,7 +170,7 @@ func SubscribeToEventType(eventType string, conn *HAConnection, ctx context.Cont
 	err := conn.WriteMessage(e)
 	// TODO: Handle errors better
 	if err != nil {
-		wrappedErr := fmt.Errorf("error writing to websocket: %w", err)
+		wrappedErr := fmt.Errorf("error writing to WebSocket: %w", err)
 		slog.Error(wrappedErr.Error())
 		panic(wrappedErr)
 	}

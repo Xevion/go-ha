@@ -133,11 +133,11 @@ func TestAppWithNilFields(t *testing.T) {
 }
 
 func TestAppWithWebsocketConnection(t *testing.T) {
-	// Test app with websocket connection (mocked)
+	// Test app with WebSocket connection (mocked)
 	app := &App{
 		ctx:       context.Background(),
 		ctxCancel: func() {},
-		conn:      nil, // In real test, this would be a mock websocket
+		conn:      nil, // In real test, this would be a mock WebSocket
 	}
 
 	// Test that Close() handles nil connection gracefully

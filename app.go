@@ -42,16 +42,16 @@ type App struct {
 
 type Item types.Item
 
-func (mi Item) Compare(other queue.Item) int {
-	if mi.Priority > other.(Item).Priority {
+func (i Item) Compare(other queue.Item) int {
+	if i.Priority > other.(Item).Priority {
 		return 1
-	} else if mi.Priority == other.(Item).Priority {
+	} else if i.Priority == other.(Item).Priority {
 		return 0
 	}
 	return -1
 }
 
-// validateHomeZone verifies that the home zone entity exists and has latitude/longitude
+// validateHomeZone verifies that the home zone entity exists and has latitude/longitude.
 func validateHomeZone(state State, entityID string) error {
 	entity, err := state.Get(entityID)
 	if err != nil {
@@ -75,10 +75,7 @@ func validateHomeZone(state State, entityID string) error {
 	return nil
 }
 
-/*
-NewApp establishes the websocket connection and returns an object
-you can use to register schedules and listeners.
-*/
+// NewApp establishes the WebSocket connection and returns an object you can use to register schedules and listeners.
 func NewApp(request types.NewAppRequest) (*App, error) {
 	if (request.URL == "" && request.IpAddress == "") || request.HAAuthToken == "" {
 		slog.Error("URL and HAAuthToken are required arguments in NewAppRequest")
@@ -138,11 +135,9 @@ func (app *App) Cleanup() {
 	}
 }
 
-// Close performs a clean shutdown of the application.
-// It cancels the context, closes the websocket connection,
-// and ensures all background processes are properly terminated.
+// Close performs a clean shutdown of the application. It cancels the context, closes the WebSocket connection, and ensures all background processes are properly terminated.
 func (app *App) Close() error {
-	// Close websocket connection if it exists
+	// Close WebSocket connection if it exists
 	if app.conn != nil {
 		deadline := time.Now().Add(10 * time.Second)
 		err := app.conn.Conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), deadline)
@@ -151,15 +146,15 @@ func (app *App) Close() error {
 			return err
 		}
 
-		// Close the websocket connection
+		// Close the WebSocket connection
 		err = app.conn.Conn.Close()
 		if err != nil {
-			slog.Warn("Error closing websocket connection", "error", err)
+			slog.Warn("Error closing WebSocket connection", "error", err)
 			return err
 		}
 	}
 
-	// Wait a short time for the websocket connection to close
+	// Wait a short time for the WebSocket connection to close
 	time.Sleep(500 * time.Millisecond)
 
 	// Cancel context to signal all goroutines to stop
@@ -338,7 +333,7 @@ func (app *App) Start() {
 		select {
 		case msg, ok := <-elChan:
 			if !ok {
-				slog.Info("Websocket channel closed, stopping main loop")
+				slog.Info("WebSocket channel closed, stopping main loop")
 				return
 			}
 			if app.entityListenersId == msg.Id {

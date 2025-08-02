@@ -1,6 +1,3 @@
-// http is used to interact with the home assistant
-// REST API. Currently only used to retrieve state for
-// a single entity_id
 package internal
 
 import (
@@ -44,7 +41,7 @@ func NewHttpClient(ctx context.Context, baseUrl *url.URL, token string) *HttpCli
 	}
 }
 
-// getRequest returns a new request
+// getRequest returns a new request.
 func (c *HttpClient) getRequest() *resty.Request {
 	return c.baseRequest.Clone(c.client.Context())
 }
