@@ -14,7 +14,7 @@ type EnabledDisabledInfo struct {
 }
 
 var (
-	currentVersion = "0.7.0"
+	currentVersion = "0.7.1"
 )
 
 var (

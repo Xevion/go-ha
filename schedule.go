@@ -7,7 +7,7 @@ import (
 
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/types"
-	"github.com/golang-module/carbon"
+	"github.com/dromara/carbon/v2"
 )
 
 type ScheduleCallback func(*Service, State)
@@ -215,7 +215,7 @@ func popSchedule(a *App) DailySchedule {
 
 func requeueSchedule(a *App, s DailySchedule) {
 	if s.isSunrise || s.isSunset {
-		var nextSunTime carbon.Carbon
+		var nextSunTime *carbon.Carbon
 		// "0s" is default value
 		if s.sunOffset != "0s" {
 			nextSunTime = getNextSunRiseOrSet(a, s.isSunrise, s.sunOffset)
@@ -223,9 +223,9 @@ func requeueSchedule(a *App, s DailySchedule) {
 			nextSunTime = getNextSunRiseOrSet(a, s.isSunrise)
 		}
 
-		s.nextRunTime = nextSunTime.Carbon2Time()
+		s.nextRunTime = nextSunTime.StdTime()
 	} else {
-		s.nextRunTime = carbon.Time2Carbon(s.nextRunTime).AddDay().Carbon2Time()
+		s.nextRunTime = carbon.CreateFromStdTime(s.nextRunTime).AddDay().StdTime()
 	}
 
 	a.schedules.Put(Item{

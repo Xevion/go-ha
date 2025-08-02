@@ -5,7 +5,7 @@ import (
 
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/types"
-	"github.com/golang-module/carbon"
+	"github.com/dromara/carbon/v2"
 )
 
 type ConditionCheck struct {
@@ -52,7 +52,7 @@ func CheckStatesMatch(listenerState, s string) ConditionCheck {
 	return cc
 }
 
-func CheckThrottle(throttle time.Duration, lastRan carbon.Carbon) ConditionCheck {
+func CheckThrottle(throttle time.Duration, lastRan *carbon.Carbon) ConditionCheck {
 	cc := ConditionCheck{fail: false}
 	// check if Throttle is set and that duration hasn't passed since lastRan
 	if throttle.Seconds() > 0 &&
@@ -169,7 +169,7 @@ func CheckStartEndTime(s types.TimeString, isStart bool) ConditionCheck {
 	}
 
 	now := time.Now()
-	parsedTime := internal.ParseTime(string(s)).Carbon2Time()
+	parsedTime := internal.ParseTime(string(s)).StdTime()
 	if isStart {
 		if parsedTime.After(now) {
 			cc.fail = true

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-module/carbon"
+	"github.com/dromara/carbon/v2"
 
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/types"

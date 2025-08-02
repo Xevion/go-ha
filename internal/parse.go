@@ -5,11 +5,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/golang-module/carbon"
+	"github.com/dromara/carbon/v2"
 )
 
 // Parses a HH:MM string.
-func ParseTime(s string) carbon.Carbon {
+func ParseTime(s string) *carbon.Carbon {
 	t, err := time.Parse("15:04", s)
 	if err != nil {
 		parsingErr := fmt.Errorf("failed to parse time string \"%s\"; format must be HH:MM.: %w", s, err)

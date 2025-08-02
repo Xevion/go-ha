@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang-module/carbon"
+	"github.com/dromara/carbon/v2"
 
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/internal/connect"
@@ -18,7 +18,7 @@ type EventListener struct {
 	betweenStart string
 	betweenEnd   string
 	throttle     time.Duration
-	lastRan      carbon.Carbon
+	lastRan      *carbon.Carbon
 
 	exceptionDates  []time.Time
 	exceptionRanges []types.TimeRange

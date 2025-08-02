@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang-module/carbon"
+	"github.com/dromara/carbon/v2"
 
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/types"
@@ -17,7 +17,7 @@ type EntityListener struct {
 	fromState string
 	toState   string
 	throttle  time.Duration
-	lastRan   carbon.Carbon
+	lastRan   *carbon.Carbon
 
 	betweenStart string
 	betweenEnd   string

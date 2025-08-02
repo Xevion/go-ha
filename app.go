@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-module/carbon"
+	"github.com/dromara/carbon/v2"
 	"github.com/gorilla/websocket"
 	sunriseLib "github.com/nathan-osman/go-sunrise"
 
@@ -178,7 +178,7 @@ func (app *App) RegisterSchedules(schedules ...DailySchedule) {
 	for _, s := range schedules {
 		// realStartTime already set for sunset/sunrise
 		if s.isSunrise || s.isSunset {
-			s.nextRunTime = getNextSunRiseOrSet(app, s.isSunrise, s.sunOffset).Carbon2Time()
+			s.nextRunTime = getNextSunRiseOrSet(app, s.isSunrise, s.sunOffset).StdTime()
 			app.schedules.Put()
 			continue
 		}
@@ -191,10 +191,10 @@ func (app *App) RegisterSchedules(schedules ...DailySchedule) {
 			startTime = startTime.AddDay()
 		}
 
-		s.nextRunTime = startTime.Carbon2Time()
+		s.nextRunTime = startTime.StdTime()
 		app.schedules.Put(Item{
 			Value:    s,
-			Priority: float64(startTime.Carbon2Time().Unix()),
+			Priority: float64(startTime.StdTime().Unix()),
 		})
 	}
 }
@@ -206,7 +206,7 @@ func (app *App) RegisterIntervals(intervals ...Interval) {
 			panic(ErrInvalidArgs)
 		}
 
-		i.nextRunTime = internal.ParseTime(string(i.startTime)).Carbon2Time()
+		i.nextRunTime = internal.ParseTime(string(i.startTime)).StdTime()
 		now := time.Now()
 		for i.nextRunTime.Before(now) {
 			i.nextRunTime = i.nextRunTime.Add(i.frequency)
@@ -250,8 +250,8 @@ func (app *App) RegisterEventListeners(evls ...EventListener) {
 	}
 }
 
-func getSunriseSunset(s *StateImpl, sunrise bool, dateToUse carbon.Carbon, offset ...types.DurationString) carbon.Carbon {
-	date := dateToUse.Carbon2Time()
+func getSunriseSunset(s *StateImpl, sunrise bool, dateToUse *carbon.Carbon, offset ...types.DurationString) *carbon.Carbon {
+	date := dateToUse.StdTime()
 	rise, set := sunriseLib.SunriseSunset(s.latitude, s.longitude, date.Year(), date.Month(), date.Day())
 	rise, set = rise.Local(), set.Local()
 
@@ -283,7 +283,7 @@ func getSunriseSunset(s *StateImpl, sunrise bool, dateToUse carbon.Carbon, offse
 	return setOrRiseToday
 }
 
-func getNextSunRiseOrSet(a *App, sunrise bool, offset ...types.DurationString) carbon.Carbon {
+func getNextSunRiseOrSet(a *App, sunrise bool, offset ...types.DurationString) *carbon.Carbon {
 	sunriseOrSunset := getSunriseSunset(a.state, sunrise, carbon.Now(), offset...)
 	if sunriseOrSunset.Lt(carbon.Now()) {
 		// if we're past today's sunset or sunrise (accounting for offset) then get tomorrows
