@@ -4,13 +4,9 @@ import (
 	"github.com/Xevion/go-ha/internal/connect"
 )
 
-/* Structs */
-
 type Cover struct {
 	conn *connect.HAConnection
 }
-
-/* Public API */
 
 // Close all or specified cover. Takes an entityId.
 func (c Cover) Close(entityId string) error {

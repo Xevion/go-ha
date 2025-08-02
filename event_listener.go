@@ -8,7 +8,7 @@ import (
 	"github.com/golang-module/carbon"
 
 	"github.com/Xevion/go-ha/internal"
-	ws "github.com/Xevion/go-ha/internal/connect"
+	"github.com/Xevion/go-ha/internal/connect"
 	"github.com/Xevion/go-ha/types"
 )
 
@@ -141,7 +141,7 @@ type BaseEventMsg struct {
 }
 
 /* Functions */
-func callEventListeners(app *App, msg ws.ChannelMessage) {
+func callEventListeners(app *App, msg connect.ChannelMessage) {
 	baseEventMsg := BaseEventMsg{}
 	_ = json.Unmarshal(msg.Raw, &baseEventMsg)
 	listeners, ok := app.eventListeners[baseEventMsg.Event.EventType]

@@ -1,16 +1,12 @@
 package services
 
 import (
-	ws "github.com/Xevion/go-ha/internal/connect"
+	"github.com/Xevion/go-ha/internal/connect"
 )
 
-/* Structs */
-
 type ZWaveJS struct {
-	conn *ws.HAConnection
+	conn *connect.HAConnection
 }
-
-/* Public API */
 
 // ZWaveJS bulk_set_partial_config_parameters service.
 func (zw ZWaveJS) BulkSetPartialConfigParam(entityId string, parameter int, value any) error {

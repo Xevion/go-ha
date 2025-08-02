@@ -4,13 +4,9 @@ import (
 	"github.com/Xevion/go-ha/internal/connect"
 )
 
-/* Structs */
-
 type InputText struct {
 	conn *connect.HAConnection
 }
-
-/* Public API */
 
 func (ib InputText) Set(entityId string, value string) error {
 	req := NewBaseServiceRequest(entityId)

@@ -5,13 +5,9 @@ import (
 	"github.com/Xevion/go-ha/types"
 )
 
-/* Structs */
-
 type Climate struct {
 	conn *connect.HAConnection
 }
-
-/* Public API */
 
 func (c Climate) SetFanMode(entityId string, fanMode string) error {
 	req := NewBaseServiceRequest(entityId)

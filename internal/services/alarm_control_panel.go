@@ -1,16 +1,12 @@
 package services
 
 import (
-	ws "github.com/Xevion/go-ha/internal/connect"
+	"github.com/Xevion/go-ha/internal/connect"
 )
 
-/* Structs */
-
 type AlarmControlPanel struct {
-	conn *ws.HAConnection
+	conn *connect.HAConnection
 }
-
-/* Public API */
 
 // Send the alarm the command for arm away.
 // Takes an entityId and an optional

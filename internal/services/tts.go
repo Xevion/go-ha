@@ -1,16 +1,12 @@
 package services
 
 import (
-	connect "github.com/Xevion/go-ha/internal/connect"
+	"github.com/Xevion/go-ha/internal/connect"
 )
-
-/* Structs */
 
 type TTS struct {
 	conn *connect.HAConnection
 }
-
-/* Public API */
 
 // Remove all text-to-speech cache files and RAM cache.
 func (tts TTS) ClearCache() error {

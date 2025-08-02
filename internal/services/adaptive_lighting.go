@@ -4,13 +4,9 @@ import (
 	"github.com/Xevion/go-ha/internal/connect"
 )
 
-/* Structs */
-
 type AdaptiveLighting struct {
 	conn *connect.HAConnection
 }
-
-/* Public API */
 
 // Set manual control for an adaptive lighting entity.
 func (al AdaptiveLighting) SetManualControl(entityId string, enabled bool) error {

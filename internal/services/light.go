@@ -1,16 +1,12 @@
 package services
 
 import (
-	ws "github.com/Xevion/go-ha/internal/connect"
+	"github.com/Xevion/go-ha/internal/connect"
 )
 
-/* Structs */
-
 type Light struct {
-	conn *ws.HAConnection
+	conn *connect.HAConnection
 }
-
-/* Public API */
 
 // TurnOn a light entity. Takes an entityId and an optional
 // map that is translated into service_data.

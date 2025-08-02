@@ -85,7 +85,7 @@ The general flow is
 3. Start app
 
 ```go
-import ga "github.com/Xevion/go-ha"
+import ha "github.com/Xevion/go-ha"
 
 // replace with IP and port of your Home Assistant installation
 app, err := ga.NewApp(ga.NewAppRequest{

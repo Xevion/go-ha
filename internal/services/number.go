@@ -1,11 +1,11 @@
 package services
 
 import (
-	ws "github.com/Xevion/go-ha/internal/connect"
+	"github.com/Xevion/go-ha/internal/connect"
 )
 
 type Number struct {
-	conn *ws.HAConnection
+	conn *connect.HAConnection
 }
 
 func (ib Number) SetValue(entityId string, value float32) error {

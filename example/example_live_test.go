@@ -11,13 +11,13 @@ import (
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/yaml.v3"
 
-	ga "github.com/Xevion/go-ha"
+	ha "github.com/Xevion/go-ha"
 )
 
 type (
 	MySuite struct {
 		suite.Suite
-		app      *ga.App
+		app      *ha.App
 		config   *Config
 		suiteCtx map[string]any
 	}
@@ -62,7 +62,7 @@ func (s *MySuite) SetupSuite() {
 		slog.Error("Error unmarshalling config file", "error", err)
 	}
 
-	s.app, err = ga.NewApp(ga.NewAppRequest{
+	s.app, err = ha.NewApp(ha.NewAppRequest{
 		HAAuthToken:      s.config.Hass.HAAuthToken,
 		IpAddress:        s.config.Hass.IpAddress,
 		HomeZoneEntityId: s.config.Hass.HomeZoneEntityId,
@@ -76,13 +76,13 @@ func (s *MySuite) SetupSuite() {
 	entityId := s.config.Entities.LightEntityId
 	if entityId != "" {
 		s.suiteCtx["entityCallbackInvoked"] = false
-		etl := ga.NewEntityListener().EntityIds(entityId).Call(s.entityCallback).Build()
+		etl := ha.NewEntityListener().EntityIds(entityId).Call(s.entityCallback).Build()
 		s.app.RegisterEntityListeners(etl)
 	}
 
 	s.suiteCtx["dailyScheduleCallbackInvoked"] = false
 	runTime := time.Now().Add(1 * time.Minute).Format("15:04")
-	dailySchedule := ga.NewDailySchedule().Call(s.dailyScheduleCallback).At(runTime).Build()
+	dailySchedule := ha.NewDailySchedule().Call(s.dailyScheduleCallback).At(runTime).Build()
 	s.app.RegisterSchedules(dailySchedule)
 
 	// start GA app
@@ -122,13 +122,13 @@ func (s *MySuite) TestSchedule() {
 }
 
 // Capture event after light entity state has changed
-func (s *MySuite) entityCallback(se *ga.Service, st ga.State, e ga.EntityData) {
+func (s *MySuite) entityCallback(se *ha.Service, st ha.State, e ha.EntityData) {
 	slog.Info("Entity callback called.", "entity id", e.TriggerEntityId, "from state", e.FromState, "to state", e.ToState)
 	s.suiteCtx["entityCallbackInvoked"] = true
 }
 
 // Capture planned daily schedule
-func (s *MySuite) dailyScheduleCallback(se *ga.Service, st ga.State) {
+func (s *MySuite) dailyScheduleCallback(se *ha.Service, st ha.State) {
 	slog.Info("Daily schedule callback called.")
 	s.suiteCtx["dailyScheduleCallbackInvoked"] = true
 }

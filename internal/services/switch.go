@@ -1,16 +1,12 @@
 package services
 
 import (
-	ws "github.com/Xevion/go-ha/internal/connect"
+	"github.com/Xevion/go-ha/internal/connect"
 )
 
-/* Structs */
-
 type Switch struct {
-	conn *ws.HAConnection
+	conn *connect.HAConnection
 }
-
-/* Public API */
 
 func (s Switch) TurnOn(entityId string) error {
 	req := NewBaseServiceRequest(entityId)

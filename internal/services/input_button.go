@@ -1,16 +1,12 @@
 package services
 
 import (
-	ws "github.com/Xevion/go-ha/internal/connect"
+	"github.com/Xevion/go-ha/internal/connect"
 )
 
-/* Structs */
-
 type InputButton struct {
-	conn *ws.HAConnection
+	conn *connect.HAConnection
 }
-
-/* Public API */
 
 func (ib InputButton) Press(entityId string) error {
 	req := NewBaseServiceRequest(entityId)

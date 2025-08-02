@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang-module/carbon"
 
-	internal "github.com/Xevion/go-ha/internal"
+	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/types"
 )
 

@@ -4,16 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	ws "github.com/Xevion/go-ha/internal/connect"
+	"github.com/Xevion/go-ha/internal/connect"
 )
 
-/* Structs */
-
 type InputDatetime struct {
-	conn *ws.HAConnection
+	conn *connect.HAConnection
 }
-
-/* Public API */
 
 func (ib InputDatetime) Set(entityId string, value time.Time) error {
 	req := NewBaseServiceRequest(entityId)

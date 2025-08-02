@@ -9,7 +9,7 @@ import (
 	"strings"
 	"text/template"
 
-	ga "github.com/Xevion/go-ha"
+	ha "github.com/Xevion/go-ha"
 	"github.com/Xevion/go-ha/types"
 	"gopkg.in/yaml.v3"
 )
@@ -68,7 +68,7 @@ func toCamelCase(s string) string {
 }
 
 // validateHomeZone verifies that the home zone entity exists and is valid
-func validateHomeZone(state ga.State, entityID string) error {
+func validateHomeZone(state ha.State, entityID string) error {
 	entity, err := state.Get(entityID)
 	if err != nil {
 		return fmt.Errorf("home zone entity '%s' not found: %w", entityID, err)
@@ -99,7 +99,7 @@ func generate(config Config) error {
 		config.HomeZoneEntityId = "zone.home"
 	}
 
-	app, err := ga.NewApp(types.NewAppRequest{
+	app, err := ha.NewApp(types.NewAppRequest{
 		URL:              config.URL,
 		HAAuthToken:      config.HAAuthToken,
 		HomeZoneEntityId: config.HomeZoneEntityId,
