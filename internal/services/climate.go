@@ -1,14 +1,14 @@
 package services
 
 import (
-	ws "github.com/Xevion/go-ha/internal/websocket"
+	"github.com/Xevion/go-ha/internal/connect"
 	"github.com/Xevion/go-ha/types"
 )
 
 /* Structs */
 
 type Climate struct {
-	conn *ws.WebsocketWriter
+	conn *connect.HAConnection
 }
 
 /* Public API */

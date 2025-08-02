@@ -1,12 +1,12 @@
 package services
 
 import (
-	ws "github.com/Xevion/go-ha/internal/websocket"
+	ws "github.com/Xevion/go-ha/internal/connect"
 	"github.com/Xevion/go-ha/types"
 )
 
 type Notify struct {
-	conn *ws.WebsocketWriter
+	conn *ws.HAConnection
 }
 
 // Notify sends a notification. Takes a types.NotifyRequest.

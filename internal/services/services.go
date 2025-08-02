@@ -2,7 +2,7 @@ package services
 
 import (
 	"github.com/Xevion/go-ha/internal"
-	ws "github.com/Xevion/go-ha/internal/websocket"
+	ws "github.com/Xevion/go-ha/internal/connect"
 )
 
 func BuildService[
@@ -29,7 +29,7 @@ func BuildService[
 		Timer |
 		Vacuum |
 		ZWaveJS,
-](conn *ws.WebsocketWriter) *T {
+](conn *ws.HAConnection) *T {
 	return &T{conn: conn}
 }
 

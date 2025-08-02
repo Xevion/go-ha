@@ -1,11 +1,11 @@
 package services
 
 import (
-	ws "github.com/Xevion/go-ha/internal/websocket"
+	ws "github.com/Xevion/go-ha/internal/connect"
 )
 
 type Number struct {
-	conn *ws.WebsocketWriter
+	conn *ws.HAConnection
 }
 
 func (ib Number) SetValue(entityId string, value float32) error {

@@ -2,11 +2,11 @@ package services
 
 import (
 	"github.com/Xevion/go-ha/internal"
-	ws "github.com/Xevion/go-ha/internal/websocket"
+	"github.com/Xevion/go-ha/internal/connect"
 )
 
 type Event struct {
-	conn *ws.WebsocketWriter
+	conn *connect.HAConnection
 }
 
 // Fire an event

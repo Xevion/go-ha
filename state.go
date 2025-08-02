@@ -83,7 +83,7 @@ func (s *StateImpl) Get(entityId string) (EntityState, error) {
 // ListEntities returns a list of all entities in Home Assistant.
 // see rest documentation for more details: https://developers.home-assistant.io/docs/api/rest/#actions
 func (s *StateImpl) ListEntities() ([]EntityState, error) {
-	resp, err := s.httpClient.States()
+	resp, err := s.httpClient.GetStates()
 	if err != nil {
 		return nil, err
 	}

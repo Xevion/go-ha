@@ -4,6 +4,7 @@
 package internal
 
 import (
+	"context"
 	"errors"
 	"net/url"
 	"time"
@@ -12,40 +13,44 @@ import (
 )
 
 type HttpClient struct {
-	client *resty.Client
+	client      *resty.Client
+	baseRequest *resty.Request
 }
 
-func NewHttpClient(url *url.URL, token string) *HttpClient {
+func NewHttpClient(ctx context.Context, baseUrl *url.URL, token string) *HttpClient {
 	// Shallow copy the URL to avoid modifying the original
-	u := *url
+	u := *baseUrl
 	u.Path = "/api"
-	if u.Scheme == "ws" {
-		u.Scheme = "http"
-	}
-	if u.Scheme == "wss" {
-		u.Scheme = "https"
-	}
 
 	// Create resty client with configuration
 	client := resty.New().
 		SetBaseURL(u.String()).
-		SetHeader("Authorization", "Bearer "+token).
-		SetTimeout(30 * time.Second).
+		SetTimeout(30*time.Second).
 		SetRetryCount(3).
-		SetRetryWaitTime(1 * time.Second).
-		SetRetryMaxWaitTime(5 * time.Second).
+		SetRetryWaitTime(1*time.Second).
+		SetRetryMaxWaitTime(5*time.Second).
 		AddRetryConditions(func(r *resty.Response, err error) bool {
-			return err != nil || r.StatusCode() >= 500
-		})
+			return err != nil || (r.StatusCode() >= 500 && r.StatusCode() != 403)
+		}).
+		SetHeader("User-Agent", "go-ha/"+currentVersion).
+		SetContext(ctx)
 
 	return &HttpClient{
 		client: client,
+		baseRequest: client.R().
+			SetContentType("application/json").
+			SetHeader("Accept", "application/json").
+			SetAuthToken(token),
 	}
 }
 
+// getRequest returns a new request
+func (c *HttpClient) getRequest() *resty.Request {
+	return c.baseRequest.Clone(c.client.Context())
+}
+
 func (c *HttpClient) GetState(entityId string) ([]byte, error) {
-	resp, err := c.client.R().
-		Get("/states/" + entityId)
+	resp, err := c.getRequest().Get("/states/" + entityId)
 
 	if err != nil {
 		return nil, errors.New("Error making HTTP request: " + err.Error())
@@ -58,9 +63,9 @@ func (c *HttpClient) GetState(entityId string) ([]byte, error) {
 	return resp.Bytes(), nil
 }
 
-func (c *HttpClient) States() ([]byte, error) {
-	resp, err := c.client.R().
-		Get("/states")
+// GetStates returns the states of all entities.
+func (c *HttpClient) GetStates() ([]byte, error) {
+	resp, err := c.getRequest().Get("/states")
 
 	if err != nil {
 		return nil, errors.New("Error making HTTP request: " + err.Error())

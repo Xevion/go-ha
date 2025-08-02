@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
-	ws "github.com/Xevion/go-ha/internal/websocket"
+	ws "github.com/Xevion/go-ha/internal/connect"
 )
 
 /* Structs */
 
 type InputDatetime struct {
-	conn *ws.WebsocketWriter
+	conn *ws.HAConnection
 }
 
 /* Public API */

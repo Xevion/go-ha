@@ -1,8 +1,8 @@
 package gomeassistant
 
 import (
+	"github.com/Xevion/go-ha/internal/connect"
 	"github.com/Xevion/go-ha/internal/services"
-	ws "github.com/Xevion/go-ha/internal/websocket"
 )
 
 type Service struct {
@@ -31,7 +31,7 @@ type Service struct {
 	ZWaveJS           *services.ZWaveJS
 }
 
-func newService(conn *ws.WebsocketWriter) *Service {
+func newService(conn *connect.HAConnection) *Service {
 	return &Service{
 		AdaptiveLighting:  services.BuildService[services.AdaptiveLighting](conn),
 		AlarmControlPanel: services.BuildService[services.AlarmControlPanel](conn),

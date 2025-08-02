@@ -1,13 +1,13 @@
 package services
 
 import (
-	ws "github.com/Xevion/go-ha/internal/websocket"
+	ws "github.com/Xevion/go-ha/internal/connect"
 )
 
 /* Structs */
 
 type Vacuum struct {
-	conn *ws.WebsocketWriter
+	conn *ws.HAConnection
 }
 
 /* Public API */

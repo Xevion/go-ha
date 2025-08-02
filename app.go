@@ -14,8 +14,8 @@ import (
 	sunriseLib "github.com/nathan-osman/go-sunrise"
 
 	"github.com/Workiva/go-datastructures/queue"
-	internal "github.com/Xevion/go-ha/internal"
-	ws "github.com/Xevion/go-ha/internal/websocket"
+	"github.com/Xevion/go-ha/internal"
+	"github.com/Xevion/go-ha/internal/connect"
 	"github.com/Xevion/go-ha/types"
 )
 
@@ -24,10 +24,9 @@ var ErrInvalidArgs = errors.New("invalid arguments provided")
 type App struct {
 	ctx       context.Context
 	ctxCancel context.CancelFunc
-	conn      *websocket.Conn
 
 	// Wraps the ws connection with added mutex locking
-	wsWriter *ws.WebsocketWriter
+	conn *connect.HAConnection
 
 	httpClient *internal.HttpClient
 
@@ -101,18 +100,14 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 		}
 	}
 
-	conn, ctx, ctxCancel, err := ws.ConnectionFromUri(baseURL, request.HAAuthToken)
+	conn, ctx, ctxCancel, err := connect.ConnectionFromUri(baseURL, request.HAAuthToken)
 	if err != nil {
 		return nil, err
 	}
-	if conn == nil {
-		return nil, err
-	}
 
-	httpClient := internal.NewHttpClient(baseURL, request.HAAuthToken)
+	httpClient := internal.NewHttpClient(ctx, baseURL, request.HAAuthToken)
 
-	wsWriter := &ws.WebsocketWriter{Conn: conn}
-	service := newService(wsWriter)
+	service := newService(conn)
 	state, err := newState(httpClient, request.HomeZoneEntityId)
 	if err != nil {
 		return nil, err
@@ -125,7 +120,6 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 
 	return &App{
 		conn:            conn,
-		wsWriter:        wsWriter,
 		ctx:             ctx,
 		ctxCancel:       ctxCancel,
 		httpClient:      httpClient,
@@ -151,14 +145,14 @@ func (app *App) Close() error {
 	// Close websocket connection if it exists
 	if app.conn != nil {
 		deadline := time.Now().Add(10 * time.Second)
-		err := app.conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), deadline)
+		err := app.conn.Conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), deadline)
 		if err != nil {
 			slog.Warn("Error writing close message", "error", err)
 			return err
 		}
 
 		// Close the websocket connection
-		err = app.conn.Close()
+		err = app.conn.Conn.Close()
 		if err != nil {
 			slog.Warn("Error closing websocket connection", "error", err)
 			return err
@@ -249,7 +243,7 @@ func (app *App) RegisterEventListeners(evls ...EventListener) {
 			if elList, ok := app.eventListeners[eventType]; ok {
 				app.eventListeners[eventType] = append(elList, &evl)
 			} else {
-				ws.SubscribeToEventType(eventType, app.wsWriter, app.ctx)
+				connect.SubscribeToEventType(eventType, app.conn, app.ctx)
 				app.eventListeners[eventType] = []*EventListener{&evl}
 			}
 		}
@@ -309,7 +303,7 @@ func (app *App) Start() {
 
 	// subscribe to state_changed events
 	id := internal.NextId()
-	ws.SubscribeToStateChangedEvents(id, app.wsWriter, app.ctx)
+	connect.SubscribeToStateChangedEvents(id, app.conn, app.ctx)
 	app.entityListenersId = id
 
 	// Run entity listeners startup
@@ -337,8 +331,8 @@ func (app *App) Start() {
 	}
 
 	// entity listeners and event listeners
-	elChan := make(chan ws.ChanMsg, 100) // Add buffer to prevent channel overflow
-	go ws.ListenWebsocket(app.conn, elChan)
+	elChan := make(chan connect.ChannelMessage, 100) // Add buffer to prevent channel overflow
+	go connect.ListenWebsocket(app.conn.Conn, elChan)
 
 	for {
 		select {

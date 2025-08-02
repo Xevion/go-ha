@@ -1,4 +1,4 @@
-package websocket
+package connect
 
 import (
 	"encoding/json"
@@ -7,22 +7,26 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// BaseMessage is the base message type for all messages sent by the websocket server.
 type BaseMessage struct {
 	Type    string `json:"type"`
 	Id      int64  `json:"id"`
-	Success bool   `json:"success"`
+	Success bool   `json:"success"` // not present in all messages
 }
 
-type ChanMsg struct {
+type ChannelMessage struct {
 	Id      int64
 	Type    string
 	Success bool
 	Raw     []byte
 }
 
-func ListenWebsocket(conn *websocket.Conn, c chan ChanMsg) {
+// ListenWebsocket reads messages from the websocket connection and sends them to the channel.
+// It will close the channel if it encounters an error, or if the channel is full, and return.
+// It ignores errors in deserialization.
+func ListenWebsocket(conn *websocket.Conn, c chan ChannelMessage) {
 	for {
-		bytes, err := ReadMessage(conn)
+		raw, err := ReadMessageRaw(conn)
 		if err != nil {
 			slog.Error("Error reading from websocket", "err", err)
 			close(c)
@@ -33,20 +37,26 @@ func ListenWebsocket(conn *websocket.Conn, c chan ChanMsg) {
 			// default to true for messages that don't include "success" at all
 			Success: true,
 		}
-		_ = json.Unmarshal(bytes, &base)
-		if !base.Success {
-			slog.Warn("Received unsuccessful response", "response", string(bytes))
+		err = json.Unmarshal(raw, &base)
+		if err != nil {
+			slog.Error("Error unmarshalling message", "err", err, "message", string(raw))
+			continue
 		}
-		chanMsg := ChanMsg{
+		if !base.Success {
+			slog.Warn("Received unsuccessful response", "response", string(raw))
+		}
+
+		// Create a channel message from the raw message
+		channelMessage := ChannelMessage{
 			Type:    base.Type,
 			Id:      base.Id,
 			Success: base.Success,
-			Raw:     bytes,
+			Raw:     raw,
 		}
 
 		// Use non-blocking send to avoid hanging on closed channel
 		select {
-		case c <- chanMsg:
+		case c <- channelMessage:
 			// Message sent successfully
 		default:
 			// Channel is full or closed, break out of loop

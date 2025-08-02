@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"reflect"
 	"runtime"
 	"sync/atomic"
@@ -11,6 +12,10 @@ type EnabledDisabledInfo struct {
 	State      string
 	RunOnError bool
 }
+
+var (
+	currentVersion = "0.7.0"
+)
 
 var (
 	id atomic.Int64 // default value is 0
@@ -25,4 +30,21 @@ func NextId() int64 {
 // GetFunctionName returns the name of the function that the interface is a pointer to.
 func GetFunctionName(i interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+}
+
+// GetEquivalentWebsocketScheme returns the equivalent websocket scheme for the given scheme.
+// If the scheme is http or https, it returns ws or wss respectively.
+// If the scheme is ws or wss, it returns the same scheme.
+// If the scheme is not any of the above, it returns an error.
+func GetEquivalentWebsocketScheme(scheme string) (string, error) {
+	switch scheme {
+	case "http":
+		return "ws", nil
+	case "https":
+		return "wss", nil
+	case "ws", "wss":
+		return scheme, nil
+	default:
+		return "", fmt.Errorf("unexpected scheme: %s", scheme)
+	}
 }

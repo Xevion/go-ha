@@ -1,11 +1,11 @@
 package services
 
 import (
-	ws "github.com/Xevion/go-ha/internal/websocket"
+	"github.com/Xevion/go-ha/internal/connect"
 )
 
 type HomeAssistant struct {
-	conn *ws.WebsocketWriter
+	conn *connect.HAConnection
 }
 
 // TurnOn a Home Assistant entity. Takes an entityId and an optional
