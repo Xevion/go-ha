@@ -87,7 +87,7 @@ func CheckExceptionRanges(eList []types.TimeRange) ConditionCheck {
 	return cc
 }
 
-func CheckEnabledEntity(s State, infos []internal.EnabledDisabledInfo) ConditionCheck {
+func CheckEnabledEntity(s StateReader, infos []internal.EnabledDisabledInfo) ConditionCheck {
 	cc := ConditionCheck{fail: false}
 	if len(infos) == 0 {
 		return cc
@@ -115,7 +115,7 @@ func CheckEnabledEntity(s State, infos []internal.EnabledDisabledInfo) Condition
 	return cc
 }
 
-func CheckDisabledEntity(s State, infos []internal.EnabledDisabledInfo) ConditionCheck {
+func CheckDisabledEntity(s StateReader, infos []internal.EnabledDisabledInfo) ConditionCheck {
 	cc := ConditionCheck{fail: false}
 	if len(infos) == 0 {
 		return cc

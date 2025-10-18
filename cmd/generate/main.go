@@ -68,7 +68,7 @@ func toCamelCase(s string) string {
 }
 
 // validateHomeZone verifies that the home zone entity exists and is valid.
-func validateHomeZone(state ha.State, entityID string) error {
+func validateHomeZone(state ha.StateReader, entityID string) error {
 	entity, err := state.Get(entityID)
 	if err != nil {
 		return fmt.Errorf("home zone entity '%s' not found: %w", entityID, err)

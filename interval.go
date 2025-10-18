@@ -9,7 +9,7 @@ import (
 	"github.com/Xevion/go-ha/types"
 )
 
-type IntervalCallback func(*Service, State)
+type IntervalCallback func(*Service, StateReader)
 
 type Interval struct {
 	frequency   time.Duration

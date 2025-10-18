@@ -97,7 +97,7 @@ func TestAppGetService(t *testing.T) {
 func TestAppGetState(t *testing.T) {
 	// Test GetState method
 	app := &App{
-		state: &StateImpl{},
+		state: &state{},
 	}
 
 	state := app.GetState()
@@ -127,7 +127,7 @@ func TestAppWithNilFields(t *testing.T) {
 
 	// Test GetState with nil state
 	state := app.GetState()
-	// When state is nil, GetState returns a typed nil (*StateImpl)
+	// When state is nil, GetState returns a typed nil (*state)
 	// This is the correct behavior - the interface is not nil but the value is nil
 	_ = state // Just ensure it doesn't panic
 }

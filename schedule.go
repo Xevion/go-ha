@@ -15,7 +15,7 @@ import (
 
 // ScheduleCallback is a function type that gets called when a schedule triggers.
 // It receives the service instance and current state as parameters.
-type ScheduleCallback func(*Service, State)
+type ScheduleCallback func(*Service, StateReader)
 
 // DailySchedule represents a recurring daily schedule with various conditions.
 // It can be configured to run at specific times, sunrise/sunset, or based on

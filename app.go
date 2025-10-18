@@ -31,7 +31,7 @@ type App struct {
 	httpClient *internal.HttpClient
 
 	service *Service
-	state   *StateImpl
+	state   *state
 
 	schedules         *queue.PriorityQueue
 	intervals         *queue.PriorityQueue
@@ -52,8 +52,8 @@ func (i Item) Compare(other queue.Item) int {
 }
 
 // validateHomeZone verifies that the home zone entity exists and has latitude/longitude.
-func validateHomeZone(state State, entityID string) error {
-	entity, err := state.Get(entityID)
+func validateHomeZone(s StateReader, entityID string) error {
+	entity, err := s.Get(entityID)
 	if err != nil {
 		return fmt.Errorf("home zone entity '%s' not found: %w", entityID, err)
 	}
@@ -245,7 +245,7 @@ func (app *App) RegisterEventListeners(evls ...EventListener) {
 	}
 }
 
-func getSunriseSunset(s *StateImpl, sunrise bool, dateToUse *carbon.Carbon, offset ...types.DurationString) *carbon.Carbon {
+func getSunriseSunset(s *state, sunrise bool, dateToUse *carbon.Carbon, offset ...types.DurationString) *carbon.Carbon {
 	date := dateToUse.StdTime()
 	rise, set := sunriseLib.SunriseSunset(s.latitude, s.longitude, date.Year(), date.Month(), date.Day())
 	rise, set = rise.Local(), set.Local()
@@ -352,6 +352,6 @@ func (app *App) GetService() *Service {
 	return app.service
 }
 
-func (app *App) GetState() State {
+func (app *App) GetState() StateReader {
 	return app.state
 }

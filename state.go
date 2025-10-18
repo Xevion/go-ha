@@ -12,7 +12,7 @@ import (
 	"github.com/Xevion/go-ha/types"
 )
 
-type State interface {
+type StateReader interface {
 	AfterSunrise(...types.DurationString) bool
 	BeforeSunrise(...types.DurationString) bool
 	AfterSunset(...types.DurationString) bool
@@ -22,8 +22,8 @@ type State interface {
 	Equals(entityId, state string) (bool, error)
 }
 
-// State is used to retrieve state from Home Assistant.
-type StateImpl struct {
+// state is used to retrieve state from Home Assistant.
+type state struct {
 	httpClient *internal.HttpClient
 	latitude   float64
 	longitude  float64
@@ -36,11 +36,11 @@ type EntityState struct {
 	LastChanged time.Time      `json:"last_changed"`
 }
 
-func newState(c *internal.HttpClient, homeZoneEntityId string) (*StateImpl, error) {
-	state := &StateImpl{httpClient: c}
+func newState(c *internal.HttpClient, homeZoneEntityId string) (*state, error) {
+	s := &state{httpClient: c}
 
 	// Ensure the zone exists and has required attributes
-	entity, err := state.Get(homeZoneEntityId)
+	entity, err := s.Get(homeZoneEntityId)
 	if err != nil {
 		return nil, fmt.Errorf("home zone entity '%s' not found: %w", homeZoneEntityId, err)
 	}
@@ -56,21 +56,21 @@ func newState(c *internal.HttpClient, homeZoneEntityId string) (*StateImpl, erro
 	}
 
 	if lat, ok := entity.Attributes["latitude"].(float64); ok {
-		state.latitude = lat
+		s.latitude = lat
 	} else {
 		return nil, fmt.Errorf("home zone entity '%s' missing valid latitude attribute", homeZoneEntityId)
 	}
 
 	if long, ok := entity.Attributes["longitude"].(float64); ok {
-		state.longitude = long
+		s.longitude = long
 	} else {
 		return nil, fmt.Errorf("home zone entity '%s' missing valid longitude attribute", homeZoneEntityId)
 	}
 
-	return state, nil
+	return s, nil
 }
 
-func (s *StateImpl) Get(entityId string) (EntityState, error) {
+func (s *state) Get(entityId string) (EntityState, error) {
 	resp, err := s.httpClient.GetState(entityId)
 	if err != nil {
 		return EntityState{}, err
@@ -82,7 +82,7 @@ func (s *StateImpl) Get(entityId string) (EntityState, error) {
 
 // ListEntities returns a list of all entities in Home Assistant.
 // See REST documentation for more details: https://developers.home-assistant.io/docs/api/rest/#actions
-func (s *StateImpl) ListEntities() ([]EntityState, error) {
+func (s *state) ListEntities() ([]EntityState, error) {
 	resp, err := s.httpClient.GetStates()
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func (s *StateImpl) ListEntities() ([]EntityState, error) {
 	return es, err
 }
 
-func (s *StateImpl) Equals(entityId string, expectedState string) (bool, error) {
+func (s *state) Equals(entityId string, expectedState string) (bool, error) {
 	currentState, err := s.Get(entityId)
 	if err != nil {
 		return false, err
@@ -100,20 +100,20 @@ func (s *StateImpl) Equals(entityId string, expectedState string) (bool, error) 
 	return currentState.State == expectedState, nil
 }
 
-func (s *StateImpl) BeforeSunrise(offset ...types.DurationString) bool {
+func (s *state) BeforeSunrise(offset ...types.DurationString) bool {
 	sunrise := getSunriseSunset(s, true, carbon.Now(), offset...)
 	return carbon.Now().Lt(sunrise)
 }
 
-func (s *StateImpl) AfterSunrise(offset ...types.DurationString) bool {
+func (s *state) AfterSunrise(offset ...types.DurationString) bool {
 	return !s.BeforeSunrise(offset...)
 }
 
-func (s *StateImpl) BeforeSunset(offset ...types.DurationString) bool {
+func (s *state) BeforeSunset(offset ...types.DurationString) bool {
 	sunset := getSunriseSunset(s, false, carbon.Now(), offset...)
 	return carbon.Now().Lt(sunset)
 }
 
-func (s *StateImpl) AfterSunset(offset ...types.DurationString) bool {
+func (s *state) AfterSunset(offset ...types.DurationString) bool {
 	return !s.BeforeSunset(offset...)
 }
