@@ -1,4 +1,4 @@
-package gomeassistant
+package ha
 
 import (
 	"github.com/Xevion/go-ha/internal/connect"

@@ -1,4 +1,4 @@
-package gomeassistant
+package ha
 
 import (
 	"context"

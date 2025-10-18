@@ -1,7 +1,7 @@
-// Package gomeassistant provides a Go library for creating Home Assistant automations
+// Package ha provides a Go library for creating Home Assistant automations
 // and schedules. This file contains the scheduling system that allows you to create
 // daily schedules with various conditions and callbacks.
-package gomeassistant
+package ha
 
 import (
 	"fmt"
