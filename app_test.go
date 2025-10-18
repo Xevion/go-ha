@@ -82,27 +82,27 @@ func TestAppCleanup(t *testing.T) {
 	}
 }
 
-func TestAppGetService(t *testing.T) {
-	// Test GetService method
+func TestAppServices(t *testing.T) {
+	// Test Services method
 	app := &App{
 		service: &Service{},
 	}
 
-	service := app.GetService()
+	service := app.Services()
 	if service == nil {
-		t.Error("GetService() returned nil")
+		t.Error("Services() returned nil")
 	}
 }
 
-func TestAppGetState(t *testing.T) {
-	// Test GetState method
+func TestAppState(t *testing.T) {
+	// Test State method
 	app := &App{
 		state: &state{},
 	}
 
-	state := app.GetState()
+	state := app.State()
 	if state == nil {
-		t.Error("GetState() returned nil")
+		t.Error("State() returned nil")
 	}
 }
 
@@ -119,15 +119,15 @@ func TestAppWithNilFields(t *testing.T) {
 	// Test Cleanup with nil fields
 	app.Cleanup()
 
-	// Test GetService with nil service
-	service := app.GetService()
+	// Test Services with nil service
+	service := app.Services()
 	if service != nil {
-		t.Error("GetService() should return nil when service is nil")
+		t.Error("Services() should return nil when service is nil")
 	}
 
-	// Test GetState with nil state
-	state := app.GetState()
-	// When state is nil, GetState returns a typed nil (*state)
+	// Test State with nil state
+	state := app.State()
+	// When state is nil, State returns a typed nil (*state)
 	// This is the correct behavior - the interface is not nil but the value is nil
 	_ = state // Just ensure it doesn't panic
 }

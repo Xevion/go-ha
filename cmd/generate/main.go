@@ -110,11 +110,11 @@ func generate(config Config) error {
 	defer app.Cleanup()
 
 	// Validate that the home zone exists before proceeding
-	if err := validateHomeZone(app.GetState(), config.HomeZoneEntityId); err != nil {
+	if err := validateHomeZone(app.State(), config.HomeZoneEntityId); err != nil {
 		return fmt.Errorf("invalid home zone: %w", err)
 	}
 
-	entities, err := app.GetState().ListEntities()
+	entities, err := app.State().ListEntities()
 	if err != nil {
 		return fmt.Errorf("failed to list entities: %w", err)
 	}

@@ -348,10 +348,10 @@ func (app *App) Start() {
 	}
 }
 
-func (app *App) GetService() *Service {
+func (app *App) Services() *Service {
 	return app.service
 }
 
-func (app *App) GetState() StateReader {
+func (app *App) State() StateReader {
 	return app.state
 }
