@@ -107,7 +107,7 @@ func (sb scheduleBuilder) Call(callback ScheduleCallback) scheduleBuilderCall {
 // At sets the schedule to run at a specific time in 24-hour format.
 // Examples: "15:30", "09:00", "23:45"
 func (sb scheduleBuilderCall) At(s string) scheduleBuilderEnd {
-	t := internal.ParseTime(s)
+	t := internal.ParseTime(internal.RealClock{}, s)
 	sb.schedule.hour = t.Hour()
 	sb.schedule.minute = t.Minute()
 	return scheduleBuilderEnd(sb)

@@ -201,7 +201,7 @@ func (app *App) RegisterIntervals(intervals ...Interval) {
 			panic(ErrInvalidArgs)
 		}
 
-		i.nextRunTime = internal.ParseTime(string(i.startTime)).StdTime()
+		i.nextRunTime = internal.ParseTime(internal.RealClock{}, string(i.startTime)).StdTime()
 		now := time.Now()
 		for i.nextRunTime.Before(now) {
 			i.nextRunTime = i.nextRunTime.Add(i.frequency)

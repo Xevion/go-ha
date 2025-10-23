@@ -17,8 +17,8 @@ func CheckWithinTimeRange(startTime, endTime string) ConditionCheck {
 	// if betweenStart and betweenEnd both set, first account for midnight
 	// overlap, then check if between those times.
 	if startTime != "" && endTime != "" {
-		parsedStart := internal.ParseTime(startTime)
-		parsedEnd := internal.ParseTime(endTime)
+		parsedStart := internal.ParseTime(internal.RealClock{}, startTime)
+		parsedEnd := internal.ParseTime(internal.RealClock{}, endTime)
 
 		// check for midnight overlap
 		if parsedEnd.Lt(parsedStart) { // example turn on night lights when motion from 23:00 to 07:00
@@ -35,9 +35,9 @@ func CheckWithinTimeRange(startTime, endTime string) ConditionCheck {
 		}
 
 		// otherwise just check individual before/after
-	} else if startTime != "" && internal.ParseTime(startTime).IsFuture() {
+	} else if startTime != "" && internal.ParseTime(internal.RealClock{}, startTime).IsFuture() {
 		cc.fail = true
-	} else if endTime != "" && internal.ParseTime(endTime).IsPast() {
+	} else if endTime != "" && internal.ParseTime(internal.RealClock{}, endTime).IsPast() {
 		cc.fail = true
 	}
 	return cc
@@ -169,7 +169,7 @@ func CheckStartEndTime(s types.TimeString, isStart bool) ConditionCheck {
 	}
 
 	now := time.Now()
-	parsedTime := internal.ParseTime(string(s)).StdTime()
+	parsedTime := internal.ParseTime(internal.RealClock{}, string(s)).StdTime()
 	if isStart {
 		if parsedTime.After(now) {
 			cc.fail = true

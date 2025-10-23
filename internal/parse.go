@@ -8,15 +8,15 @@ import (
 	"github.com/dromara/carbon/v2"
 )
 
-// ParseTime parses a HH:MM string.
-func ParseTime(s string) *carbon.Carbon {
+// ParseTime parses a HH:MM string into an instant on the clock's current day.
+func ParseTime(clock Clock, s string) *carbon.Carbon {
 	t, err := time.Parse("15:04", s)
 	if err != nil {
 		parsingErr := fmt.Errorf("failed to parse time string \"%s\"; format must be HH:MM: %w", s, err)
 		slog.Error(parsingErr.Error())
 		panic(parsingErr)
 	}
-	return carbon.Now().SetTimeMilli(t.Hour(), t.Minute(), 0, 0)
+	return clock.Carbon().SetTimeMilli(t.Hour(), t.Minute(), 0, 0)
 }
 
 func ParseDuration(s string) time.Duration {
