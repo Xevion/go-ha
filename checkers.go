@@ -56,7 +56,7 @@ func CheckThrottle(clock internal.Clock, throttle time.Duration, lastRan *carbon
 	cc := ConditionCheck{fail: false}
 	// check if Throttle is set and that duration hasn't passed since lastRan
 	if throttle.Seconds() > 0 &&
-		lastRan.DiffAbsInSeconds(carbon.Now()) < int64(throttle.Seconds()) {
+		lastRan.DiffAbsInSeconds(clock.Carbon()) < int64(throttle.Seconds()) {
 		cc.fail = true
 	}
 	return cc
