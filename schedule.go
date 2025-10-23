@@ -251,10 +251,10 @@ func runSchedules(a *App) {
 // 4. Disabled entities (forbidden entity states)
 // The callback runs in a goroutine to avoid blocking the scheduler.
 func (s DailySchedule) maybeRunCallback(a *App) {
-	if c := CheckExceptionDates(s.exceptionDates); c.fail {
+	if c := CheckExceptionDates(a.clock, s.exceptionDates); c.fail {
 		return
 	}
-	if c := CheckAllowlistDates(s.allowlistDates); c.fail {
+	if c := CheckAllowlistDates(a.clock, s.allowlistDates); c.fail {
 		return
 	}
 	if c := CheckEnabledEntity(a.state, s.enabledEntities); c.fail {

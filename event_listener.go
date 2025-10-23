@@ -145,16 +145,16 @@ func callEventListeners(app *App, msg connect.ChannelMessage) {
 
 	for _, l := range listeners {
 		// Check conditions
-		if c := CheckWithinTimeRange(l.betweenStart, l.betweenEnd); c.fail {
+		if c := CheckWithinTimeRange(app.clock, l.betweenStart, l.betweenEnd); c.fail {
 			continue
 		}
-		if c := CheckThrottle(l.throttle, l.lastRan); c.fail {
+		if c := CheckThrottle(app.clock, l.throttle, l.lastRan); c.fail {
 			continue
 		}
-		if c := CheckExceptionDates(l.exceptionDates); c.fail {
+		if c := CheckExceptionDates(app.clock, l.exceptionDates); c.fail {
 			continue
 		}
-		if c := CheckExceptionRanges(l.exceptionRanges); c.fail {
+		if c := CheckExceptionRanges(app.clock, l.exceptionRanges); c.fail {
 			continue
 		}
 		if c := CheckEnabledEntity(app.state, l.enabledEntities); c.fail {

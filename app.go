@@ -29,6 +29,7 @@ type App struct {
 	conn *connect.HAConnection
 
 	httpClient *internal.HttpClient
+	clock      internal.Clock
 
 	service *Service
 	state   *state
@@ -120,6 +121,7 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 		ctx:             ctx,
 		ctxCancel:       ctxCancel,
 		httpClient:      httpClient,
+		clock:           internal.RealClock{},
 		service:         service,
 		state:           state,
 		schedules:       queue.NewPriorityQueue(100, false),
@@ -201,7 +203,7 @@ func (app *App) RegisterIntervals(intervals ...Interval) {
 			panic(ErrInvalidArgs)
 		}
 
-		i.nextRunTime = internal.ParseTime(internal.RealClock{}, string(i.startTime)).StdTime()
+		i.nextRunTime = internal.ParseTime(app.clock, string(i.startTime)).StdTime()
 		now := time.Now()
 		for i.nextRunTime.Before(now) {
 			i.nextRunTime = i.nextRunTime.Add(i.frequency)

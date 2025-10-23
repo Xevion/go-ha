@@ -12,13 +12,13 @@ type ConditionCheck struct {
 	fail bool
 }
 
-func CheckWithinTimeRange(startTime, endTime string) ConditionCheck {
+func CheckWithinTimeRange(clock internal.Clock, startTime, endTime string) ConditionCheck {
 	cc := ConditionCheck{fail: false}
 	// if betweenStart and betweenEnd both set, first account for midnight
 	// overlap, then check if between those times.
 	if startTime != "" && endTime != "" {
-		parsedStart := internal.ParseTime(internal.RealClock{}, startTime)
-		parsedEnd := internal.ParseTime(internal.RealClock{}, endTime)
+		parsedStart := internal.ParseTime(clock, startTime)
+		parsedEnd := internal.ParseTime(clock, endTime)
 
 		// check for midnight overlap
 		if parsedEnd.Lt(parsedStart) { // example turn on night lights when motion from 23:00 to 07:00
@@ -30,14 +30,14 @@ func CheckWithinTimeRange(startTime, endTime string) ConditionCheck {
 		}
 
 		// skip callback if not inside the range
-		if !carbon.Now().BetweenIncludedStart(parsedStart, parsedEnd) {
+		if !clock.Carbon().BetweenIncludedStart(parsedStart, parsedEnd) {
 			cc.fail = true
 		}
 
 		// otherwise just check individual before/after
-	} else if startTime != "" && internal.ParseTime(internal.RealClock{}, startTime).IsFuture() {
+	} else if startTime != "" && internal.ParseTime(clock, startTime).IsFuture() {
 		cc.fail = true
-	} else if endTime != "" && internal.ParseTime(internal.RealClock{}, endTime).IsPast() {
+	} else if endTime != "" && internal.ParseTime(clock, endTime).IsPast() {
 		cc.fail = true
 	}
 	return cc
@@ -52,7 +52,7 @@ func CheckStatesMatch(listenerState, s string) ConditionCheck {
 	return cc
 }
 
-func CheckThrottle(throttle time.Duration, lastRan *carbon.Carbon) ConditionCheck {
+func CheckThrottle(clock internal.Clock, throttle time.Duration, lastRan *carbon.Carbon) ConditionCheck {
 	cc := ConditionCheck{fail: false}
 	// check if Throttle is set and that duration hasn't passed since lastRan
 	if throttle.Seconds() > 0 &&
@@ -62,11 +62,11 @@ func CheckThrottle(throttle time.Duration, lastRan *carbon.Carbon) ConditionChec
 	return cc
 }
 
-func CheckExceptionDates(eList []time.Time) ConditionCheck {
+func CheckExceptionDates(clock internal.Clock, eList []time.Time) ConditionCheck {
 	cc := ConditionCheck{fail: false}
 	for _, e := range eList {
 		y1, m1, d1 := e.Date()
-		y2, m2, d2 := time.Now().Date()
+		y2, m2, d2 := clock.Now().Date()
 		if y1 == y2 && m1 == m2 && d1 == d2 {
 			cc.fail = true
 			break
@@ -75,9 +75,9 @@ func CheckExceptionDates(eList []time.Time) ConditionCheck {
 	return cc
 }
 
-func CheckExceptionRanges(eList []types.TimeRange) ConditionCheck {
+func CheckExceptionRanges(clock internal.Clock, eList []types.TimeRange) ConditionCheck {
 	cc := ConditionCheck{fail: false}
-	now := time.Now()
+	now := clock.Now()
 	for _, eRange := range eList {
 		if now.After(eRange.Start) && now.Before(eRange.End) {
 			cc.fail = true
@@ -144,7 +144,7 @@ func CheckDisabledEntity(s StateReader, infos []internal.EnabledDisabledInfo) Co
 	return cc
 }
 
-func CheckAllowlistDates(eList []time.Time) ConditionCheck {
+func CheckAllowlistDates(clock internal.Clock, eList []time.Time) ConditionCheck {
 	if len(eList) == 0 {
 		return ConditionCheck{fail: false}
 	}
@@ -152,7 +152,7 @@ func CheckAllowlistDates(eList []time.Time) ConditionCheck {
 	cc := ConditionCheck{fail: true}
 	for _, e := range eList {
 		y1, m1, d1 := e.Date()
-		y2, m2, d2 := time.Now().Date()
+		y2, m2, d2 := clock.Now().Date()
 		if y1 == y2 && m1 == m2 && d1 == d2 {
 			cc.fail = false
 			break
@@ -161,15 +161,15 @@ func CheckAllowlistDates(eList []time.Time) ConditionCheck {
 	return cc
 }
 
-func CheckStartEndTime(s types.TimeString, isStart bool) ConditionCheck {
+func CheckStartEndTime(clock internal.Clock, s types.TimeString, isStart bool) ConditionCheck {
 	cc := ConditionCheck{fail: false}
 	// pass immediately if default
 	if s == "00:00" {
 		return cc
 	}
 
-	now := time.Now()
-	parsedTime := internal.ParseTime(internal.RealClock{}, string(s)).StdTime()
+	now := clock.Now()
+	parsedTime := internal.ParseTime(clock, string(s)).StdTime()
 	if isStart {
 		if parsedTime.After(now) {
 			cc.fail = true

@@ -184,16 +184,16 @@ func runIntervals(a *App) {
 }
 
 func (i Interval) maybeRunCallback(a *App) {
-	if c := CheckStartEndTime(i.startTime, true); c.fail {
+	if c := CheckStartEndTime(a.clock, i.startTime, true); c.fail {
 		return
 	}
-	if c := CheckStartEndTime(i.endTime, false); c.fail {
+	if c := CheckStartEndTime(a.clock, i.endTime, false); c.fail {
 		return
 	}
-	if c := CheckExceptionDates(i.exceptionDates); c.fail {
+	if c := CheckExceptionDates(a.clock, i.exceptionDates); c.fail {
 		return
 	}
-	if c := CheckExceptionRanges(i.exceptionRanges); c.fail {
+	if c := CheckExceptionRanges(a.clock, i.exceptionRanges); c.fail {
 		return
 	}
 	if c := CheckEnabledEntity(a.state, i.enabledEntities); c.fail {
