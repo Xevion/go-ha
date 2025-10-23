@@ -6,6 +6,7 @@ import (
 
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/types"
+	"github.com/dromara/carbon/v2"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -120,6 +121,35 @@ func TestCheckWithinTimeRange(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := CheckWithinTimeRange(atTime(tt.hour, tt.minute), tt.start, tt.end)
+			assert.Equal(t, tt.fail, c.fail)
+		})
+	}
+}
+
+func TestCheckThrottle(t *testing.T) {
+	now := time.Date(2025, time.October, 23, 0, 26, 44, 0, time.Local)
+	clock := internal.NewFakeClock(now)
+	ago := func(d time.Duration) *carbon.Carbon {
+		return carbon.CreateFromStdTime(now.Add(-d))
+	}
+
+	tests := []struct {
+		name     string
+		throttle time.Duration
+		lastRan  *carbon.Carbon
+		fail     bool
+	}{
+		{"no throttle set", 0, ago(time.Second), false},
+		{"one second short of the period", time.Minute, ago(59 * time.Second), true},
+		{"exactly one period back", time.Minute, ago(time.Minute), false},
+		{"well inside the period", time.Minute, ago(time.Second), true},
+		{"long past the period", time.Minute, ago(time.Hour), false},
+		{"never ran", time.Minute, carbon.NewCarbon(now).StartOfCentury(), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := CheckThrottle(clock, tt.throttle, tt.lastRan)
 			assert.Equal(t, tt.fail, c.fail)
 		})
 	}
