@@ -62,12 +62,18 @@ func CheckThrottle(clock internal.Clock, throttle time.Duration, lastRan *carbon
 	return cc
 }
 
+// sameDate reports whether a and b fall on the same calendar day.
+func sameDate(a, b time.Time) bool {
+	y1, m1, d1 := a.Date()
+	y2, m2, d2 := b.Date()
+	return y1 == y2 && m1 == m2 && d1 == d2
+}
+
 func CheckExceptionDates(clock internal.Clock, eList []time.Time) ConditionCheck {
 	cc := ConditionCheck{fail: false}
+	now := clock.Now()
 	for _, e := range eList {
-		y1, m1, d1 := e.Date()
-		y2, m2, d2 := clock.Now().Date()
-		if y1 == y2 && m1 == m2 && d1 == d2 {
+		if sameDate(e, now) {
 			cc.fail = true
 			break
 		}
@@ -150,10 +156,9 @@ func CheckAllowlistDates(clock internal.Clock, eList []time.Time) ConditionCheck
 	}
 
 	cc := ConditionCheck{fail: true}
+	now := clock.Now()
 	for _, e := range eList {
-		y1, m1, d1 := e.Date()
-		y2, m2, d2 := clock.Now().Date()
-		if y1 == y2 && m1 == m2 && d1 == d2 {
+		if sameDate(e, now) {
 			cc.fail = false
 			break
 		}
