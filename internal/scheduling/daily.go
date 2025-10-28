@@ -31,7 +31,7 @@ type SunTrigger struct {
 }
 
 func (t *FixedTimeTrigger) NextTime(now time.Time) *time.Time {
-	next := carbon.NewCarbon(now).SetHour(t.Hour).SetMinute(t.Minute)
+	next := carbon.NewCarbon(now).SetTimeMilli(t.Hour, t.Minute, 0, 0)
 
 	// If the calculated time is before or equal to now, advance to the next day
 	if !next.StdTime().After(now) {
