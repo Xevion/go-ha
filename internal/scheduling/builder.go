@@ -8,14 +8,17 @@ import (
 )
 
 type DailyScheduleBuilder struct {
+	location Location
 	errors   []error
 	hashes   map[uint64]bool
 	triggers []Trigger
 }
 
-func NewSchedule() *DailyScheduleBuilder {
+// NewSchedule returns a builder whose sun triggers resolve against location.
+func NewSchedule(location Location) *DailyScheduleBuilder {
 	return &DailyScheduleBuilder{
-		hashes: make(map[uint64]bool),
+		location: location,
+		hashes:   make(map[uint64]bool),
 	}
 }
 
@@ -48,8 +51,10 @@ func (b *DailyScheduleBuilder) onSun(sunset bool, offset ...types.DurationString
 	}
 
 	return b.tryAddTrigger(&SunTrigger{
-		sunset: sunset,
-		offset: &offsetDuration,
+		latitude:  b.location.Latitude,
+		longitude: b.location.Longitude,
+		sunset:    sunset,
+		offset:    &offsetDuration,
 	})
 }
 

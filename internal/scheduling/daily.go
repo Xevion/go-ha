@@ -22,6 +22,12 @@ type FixedTimeTrigger struct {
 	Minute int // 0-59
 }
 
+// Location is the observer position that sun triggers are computed against.
+type Location struct {
+	Latitude  float64
+	Longitude float64
+}
+
 // SunTrigger represents a trigger based on sunrise or sunset with optional offset
 type SunTrigger struct {
 	latitude  float64        // latitude of the location

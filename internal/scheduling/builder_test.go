@@ -10,8 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var testLocation = Location{Latitude: 40.7128, Longitude: -74.0060}
+
 func TestNewSchedule(t *testing.T) {
-	builder := NewSchedule()
+	builder := NewSchedule(testLocation)
 	assert.NotNil(t, builder)
 	assert.Empty(t, builder.errors)
 	assert.Empty(t, builder.triggers)
@@ -65,7 +67,7 @@ func TestDailyScheduleBuilder_OnFixedTime(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewSchedule()
+			builder := NewSchedule(testLocation)
 			result := builder.OnFixedTime(tt.hour, tt.minute)
 
 			assert.Equal(t, builder, result) // Should return self for chaining
@@ -110,7 +112,7 @@ func TestDailyScheduleBuilder_OnSunrise(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewSchedule()
+			builder := NewSchedule(testLocation)
 			result := builder.OnSunrise(tt.offset...)
 
 			assert.Equal(t, builder, result) // Should return self for chaining
@@ -155,7 +157,7 @@ func TestDailyScheduleBuilder_OnSunset(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewSchedule()
+			builder := NewSchedule(testLocation)
 			result := builder.OnSunset(tt.offset...)
 
 			assert.Equal(t, builder, result) // Should return self for chaining
@@ -170,8 +172,32 @@ func TestDailyScheduleBuilder_OnSunset(t *testing.T) {
 	}
 }
 
+func TestDailyScheduleBuilder_SunTriggersUseConfiguredLocation(t *testing.T) {
+	now := time.Date(2025, 10, 28, 12, 0, 0, 0, time.UTC)
+
+	sunsetAt := func(location Location) time.Time {
+		builder := NewSchedule(location)
+		builder.OnSunset("0s")
+
+		trigger, err := builder.Build()
+		require.NoError(t, err)
+
+		result := trigger.NextTime(now)
+		require.NotNil(t, result)
+		return *result
+	}
+
+	anchorage := sunsetAt(Location{Latitude: 61.2181, Longitude: -149.9003})
+	quito := sunsetAt(Location{Latitude: -0.1807, Longitude: -78.4678})
+	nullIsland := sunsetAt(Location{})
+
+	assert.NotEqual(t, anchorage, quito, "sunset must depend on latitude and longitude")
+	assert.NotEqual(t, anchorage, nullIsland, "an unset location must not stand in for the configured one")
+	assert.NotEqual(t, quito, nullIsland, "an unset location must not stand in for the configured one")
+}
+
 func TestDailyScheduleBuilder_DuplicateTriggers(t *testing.T) {
-	builder := NewSchedule()
+	builder := NewSchedule(testLocation)
 
 	// Add the same fixed time trigger twice
 	builder.OnFixedTime(12, 30)
@@ -219,7 +245,7 @@ func TestDailyScheduleBuilder_Build_Success(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewSchedule()
+			builder := NewSchedule(testLocation)
 			tt.setupBuilder(builder)
 
 			trigger, err := builder.Build()
@@ -281,7 +307,7 @@ func TestDailyScheduleBuilder_Build_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewSchedule()
+			builder := NewSchedule(testLocation)
 			tt.setupBuilder(builder)
 
 			trigger, err := builder.Build()
@@ -298,7 +324,7 @@ func TestDailyScheduleBuilder_Build_Errors(t *testing.T) {
 }
 
 func TestDailyScheduleBuilder_Chaining(t *testing.T) {
-	builder := NewSchedule()
+	builder := NewSchedule(testLocation)
 
 	// Test method chaining
 	result := builder.
@@ -312,7 +338,7 @@ func TestDailyScheduleBuilder_Chaining(t *testing.T) {
 }
 
 func TestDailyScheduleBuilder_NextTime_Integration(t *testing.T) {
-	builder := NewSchedule()
+	builder := NewSchedule(testLocation)
 	builder.OnFixedTime(8, 0).
 		OnFixedTime(12, 0).
 		OnFixedTime(18, 0)
