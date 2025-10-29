@@ -176,7 +176,10 @@ func (app *App) RegisterSchedules(schedules ...DailySchedule) {
 		// realStartTime already set for sunset/sunrise
 		if s.isSunrise || s.isSunset {
 			s.nextRunTime = getNextSunRiseOrSet(app, s.isSunrise, s.sunOffset).StdTime()
-			app.schedules.Put()
+			app.schedules.Put(Item{
+				Value:    s,
+				Priority: float64(s.nextRunTime.Unix()),
+			})
 			continue
 		}
 
