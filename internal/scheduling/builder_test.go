@@ -101,7 +101,7 @@ func TestDailyScheduleBuilder_OnSunrise(t *testing.T) {
 		{
 			name:        "no offset",
 			offset:      []types.DurationString{},
-			expectError: true,
+			expectError: false,
 		},
 		{
 			name:        "invalid duration",
@@ -146,7 +146,7 @@ func TestDailyScheduleBuilder_OnSunset(t *testing.T) {
 		{
 			name:        "no offset",
 			offset:      []types.DurationString{},
-			expectError: true,
+			expectError: false,
 		},
 		{
 			name:        "invalid duration",
@@ -194,6 +194,24 @@ func TestDailyScheduleBuilder_SunTriggersUseConfiguredLocation(t *testing.T) {
 	assert.NotEqual(t, anchorage, quito, "sunset must depend on latitude and longitude")
 	assert.NotEqual(t, anchorage, nullIsland, "an unset location must not stand in for the configured one")
 	assert.NotEqual(t, quito, nullIsland, "an unset location must not stand in for the configured one")
+}
+
+func TestDailyScheduleBuilder_OmittedSunOffsetMatchesZero(t *testing.T) {
+	now := time.Date(2025, 10, 28, 12, 0, 0, 0, time.UTC)
+
+	sunsetAt := func(offset ...types.DurationString) time.Time {
+		builder := NewSchedule(testLocation)
+		builder.OnSunset(offset...)
+
+		trigger, err := builder.Build()
+		require.NoError(t, err)
+
+		result := trigger.NextTime(now)
+		require.NotNil(t, result)
+		return *result
+	}
+
+	assert.Equal(t, sunsetAt("0s"), sunsetAt(), "an omitted offset must behave as no adjustment")
 }
 
 func TestDailyScheduleBuilder_DuplicateTriggers(t *testing.T) {
@@ -286,13 +304,6 @@ func TestDailyScheduleBuilder_Build_Errors(t *testing.T) {
 			name: "invalid minute",
 			setupBuilder: func(b *DailyScheduleBuilder) {
 				b.OnFixedTime(12, 60) // Invalid minute
-			},
-			expectError: true,
-		},
-		{
-			name: "no offset for sun trigger",
-			setupBuilder: func(b *DailyScheduleBuilder) {
-				b.OnSunrise() // No offset
 			},
 			expectError: true,
 		},

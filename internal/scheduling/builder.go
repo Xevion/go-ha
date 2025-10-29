@@ -39,22 +39,22 @@ func (b *DailyScheduleBuilder) tryAddTrigger(trigger Trigger) *DailyScheduleBuil
 }
 
 func (b *DailyScheduleBuilder) onSun(sunset bool, offset ...types.DurationString) *DailyScheduleBuilder {
-	if len(offset) == 0 {
-		b.errors = append(b.errors, fmt.Errorf("no offset provided for sun"))
-		return b
-	}
-
-	offsetDuration, err := time.ParseDuration(string(offset[0]))
-	if err != nil {
-		b.errors = append(b.errors, err)
-		return b
+	// A nil offset means no adjustment, which is what SunTrigger already expects.
+	var offsetDuration *time.Duration
+	if len(offset) > 0 {
+		parsed, err := time.ParseDuration(string(offset[0]))
+		if err != nil {
+			b.errors = append(b.errors, err)
+			return b
+		}
+		offsetDuration = &parsed
 	}
 
 	return b.tryAddTrigger(&SunTrigger{
 		latitude:  b.location.Latitude,
 		longitude: b.location.Longitude,
 		sunset:    sunset,
-		offset:    &offsetDuration,
+		offset:    offsetDuration,
 	})
 }
 
