@@ -81,6 +81,26 @@ func TestSchedulerRunsTheEntryCallback(t *testing.T) {
 	assert.True(t, fired, "the callback registered with add must be the one queued")
 }
 
+func TestSchedulerDropsExhaustedTrigger(t *testing.T) {
+	december := time.Date(2025, time.December, 21, 12, 0, 0, 0, time.UTC)
+	s := newScheduler(internal.NewFakeClock(december))
+
+	builder := scheduling.NewSchedule()
+	builder.OnSunrise()
+	spec, err := builder.Build()
+	require.NoError(t, err)
+
+	// Longyearbyen, well inside the Arctic Circle. The sun does not rise there in
+	// December, so NextTime is documented to return nil.
+	trigger, err := spec.Resolve(scheduling.Location{Latitude: 78.2232, Longitude: 15.6267})
+	require.NoError(t, err)
+
+	require.Nil(t, trigger.NextTime(december), "fixture must actually exercise the nil path")
+
+	assert.NotPanics(t, func() { s.add(trigger, noop) })
+	assert.Zero(t, s.len(), "a trigger with no next occurrence must not be queued")
+}
+
 func TestSchedulerQueuesSunTriggers(t *testing.T) {
 	s := newScheduler(internal.NewFakeClock(schedulerBase))
 

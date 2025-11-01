@@ -1,6 +1,7 @@
 package ha
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/Workiva/go-datastructures/queue"
@@ -33,9 +34,16 @@ func newScheduler(clock internal.Clock) *scheduler {
 }
 
 // add queues trigger for its first fire time after the clock's current instant.
-func (s *scheduler) add(trigger scheduling.Trigger, run func()) {
+// A trigger with no next occurrence is reported and dropped.
+func (s *scheduler) add(trigger scheduling.Trigger, run func()) bool {
 	next := trigger.NextTime(s.clock.Now())
+	if next == nil {
+		slog.Warn("Trigger has no next occurrence, not scheduling", "trigger", trigger)
+		return false
+	}
+
 	s.push(&scheduledEntry{trigger: trigger, run: run, fireAt: *next})
+	return true
 }
 
 func (s *scheduler) push(entry *scheduledEntry) {
@@ -54,11 +62,18 @@ func (s *scheduler) pop() *scheduledEntry {
 	return items[0].(Item).Value.(*scheduledEntry)
 }
 
-// requeue puts an entry back for its following occurrence.
-func (s *scheduler) requeue(entry *scheduledEntry) {
+// requeue puts an entry back for its following occurrence, or drops it when the
+// trigger has none left.
+func (s *scheduler) requeue(entry *scheduledEntry) bool {
 	next := entry.trigger.NextTime(s.clock.Now())
+	if next == nil {
+		slog.Warn("Trigger has no further occurrence, dropping", "trigger", entry.trigger)
+		return false
+	}
+
 	entry.fireAt = *next
 	s.push(entry)
+	return true
 }
 
 func (s *scheduler) len() int {
