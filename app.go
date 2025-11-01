@@ -16,6 +16,7 @@ import (
 	"github.com/Workiva/go-datastructures/queue"
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/internal/connect"
+	"github.com/Xevion/go-ha/internal/scheduling"
 	"github.com/Xevion/go-ha/types"
 )
 
@@ -34,7 +35,7 @@ type App struct {
 	service *Service
 	state   *state
 
-	schedules         *queue.PriorityQueue
+	schedules         *scheduler
 	intervals         *queue.PriorityQueue
 	entityListeners   map[string][]*EntityListener
 	entityListenersId int64
@@ -105,6 +106,7 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 
 	httpClient := internal.NewHttpClient(ctx, baseURL, request.HAAuthToken)
 
+	clock := internal.RealClock{}
 	service := newService(conn)
 	state, err := newState(httpClient, request.HomeZoneEntityId)
 	if err != nil {
@@ -121,10 +123,10 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 		ctx:             ctx,
 		ctxCancel:       ctxCancel,
 		httpClient:      httpClient,
-		clock:           internal.RealClock{},
+		clock:           clock,
 		service:         service,
 		state:           state,
-		schedules:       queue.NewPriorityQueue(100, false),
+		schedules:       newScheduler(clock),
 		intervals:       queue.NewPriorityQueue(100, false),
 		entityListeners: map[string][]*EntityListener{},
 		eventListeners:  map[string][]*EventListener{},
@@ -173,29 +175,30 @@ func (app *App) Close() error {
 
 func (app *App) RegisterSchedules(schedules ...DailySchedule) {
 	for _, s := range schedules {
-		// realStartTime already set for sunset/sunrise
-		if s.isSunrise || s.isSunset {
-			s.nextRunTime = getNextSunRiseOrSet(app, s.isSunrise, s.sunOffset).StdTime()
-			app.schedules.Put(Item{
-				Value:    s,
-				Priority: float64(s.nextRunTime.Unix()),
-			})
-			continue
+		if s.specErr != nil {
+			slog.Error("Invalid schedule", "error", s.specErr)
+			panic(s.specErr)
+		}
+		if s.spec == nil {
+			slog.Error("A schedule must set a time via At(), Sunrise() or Sunset()")
+			panic(ErrInvalidArgs)
 		}
 
-		now := carbon.Now()
-		startTime := carbon.Now().SetTimeMilli(s.hour, s.minute, 0, 0)
-
-		// advance first scheduled time by frequency until it is in the future
-		if startTime.Lt(now) {
-			startTime = startTime.AddDay()
+		trigger, err := s.spec.Resolve(app.location())
+		if err != nil {
+			slog.Error("Could not resolve schedule trigger", "error", err)
+			panic(err)
 		}
 
-		s.nextRunTime = startTime.StdTime()
-		app.schedules.Put(Item{
-			Value:    s,
-			Priority: float64(startTime.StdTime().Unix()),
-		})
+		app.schedules.add(trigger, func() { s.maybeRunCallback(app) })
+	}
+}
+
+// location reports the home zone coordinates that sun triggers resolve against.
+func (app *App) location() scheduling.Location {
+	return scheduling.Location{
+		Latitude:  app.state.latitude,
+		Longitude: app.state.longitude,
 	}
 }
 
@@ -283,18 +286,8 @@ func getSunriseSunset(s *state, sunrise bool, dateToUse *carbon.Carbon, offset .
 	return setOrRiseToday
 }
 
-func getNextSunRiseOrSet(a *App, sunrise bool, offset ...types.DurationString) *carbon.Carbon {
-	sunriseOrSunset := getSunriseSunset(a.state, sunrise, carbon.Now(), offset...)
-	if sunriseOrSunset.Lt(carbon.Now()) {
-		// if we're past today's sunset or sunrise (accounting for offset) then get tomorrows
-		// as that's the next time the schedule will run
-		sunriseOrSunset = getSunriseSunset(a.state, sunrise, carbon.Tomorrow(), offset...)
-	}
-	return sunriseOrSunset
-}
-
 func (app *App) Start() {
-	slog.Info("Starting", "schedules", app.schedules.Len())
+	slog.Info("Starting", "schedules", app.schedules.len())
 	slog.Info("Starting", "entity listeners", len(app.entityListeners))
 	slog.Info("Starting", "event listeners", len(app.eventListeners))
 
