@@ -84,9 +84,12 @@ func TestSchedulerRunsTheEntryCallback(t *testing.T) {
 func TestSchedulerQueuesSunTriggers(t *testing.T) {
 	s := newScheduler(internal.NewFakeClock(schedulerBase))
 
-	builder := scheduling.NewSchedule(scheduling.Location{Latitude: 40.7128, Longitude: -74.0060})
+	builder := scheduling.NewSchedule()
 	builder.OnSunset()
-	trigger, err := builder.Build()
+	spec, err := builder.Build()
+	require.NoError(t, err)
+
+	trigger, err := spec.Resolve(scheduling.Location{Latitude: 40.7128, Longitude: -74.0060})
 	require.NoError(t, err)
 
 	s.add(trigger, noop)

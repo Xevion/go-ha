@@ -13,10 +13,10 @@ import (
 var testLocation = Location{Latitude: 40.7128, Longitude: -74.0060}
 
 func TestNewSchedule(t *testing.T) {
-	builder := NewSchedule(testLocation)
+	builder := NewSchedule()
 	assert.NotNil(t, builder)
 	assert.Empty(t, builder.errors)
-	assert.Empty(t, builder.triggers)
+	assert.Empty(t, builder.specs)
 	assert.NotNil(t, builder.hashes)
 }
 
@@ -67,7 +67,7 @@ func TestDailyScheduleBuilder_OnFixedTime(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewSchedule(testLocation)
+			builder := NewSchedule()
 			result := builder.OnFixedTime(tt.hour, tt.minute)
 
 			assert.Equal(t, builder, result) // Should return self for chaining
@@ -76,7 +76,7 @@ func TestDailyScheduleBuilder_OnFixedTime(t *testing.T) {
 				assert.Len(t, builder.errors, 1)
 			} else {
 				assert.Empty(t, builder.errors)
-				assert.Len(t, builder.triggers, 1)
+				assert.Len(t, builder.specs, 1)
 			}
 		})
 	}
@@ -112,7 +112,7 @@ func TestDailyScheduleBuilder_OnSunrise(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewSchedule(testLocation)
+			builder := NewSchedule()
 			result := builder.OnSunrise(tt.offset...)
 
 			assert.Equal(t, builder, result) // Should return self for chaining
@@ -121,7 +121,7 @@ func TestDailyScheduleBuilder_OnSunrise(t *testing.T) {
 				assert.Len(t, builder.errors, 1)
 			} else {
 				assert.Empty(t, builder.errors)
-				assert.Len(t, builder.triggers, 1)
+				assert.Len(t, builder.specs, 1)
 			}
 		})
 	}
@@ -157,7 +157,7 @@ func TestDailyScheduleBuilder_OnSunset(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewSchedule(testLocation)
+			builder := NewSchedule()
 			result := builder.OnSunset(tt.offset...)
 
 			assert.Equal(t, builder, result) // Should return self for chaining
@@ -166,7 +166,7 @@ func TestDailyScheduleBuilder_OnSunset(t *testing.T) {
 				assert.Len(t, builder.errors, 1)
 			} else {
 				assert.Empty(t, builder.errors)
-				assert.Len(t, builder.triggers, 1)
+				assert.Len(t, builder.specs, 1)
 			}
 		})
 	}
@@ -176,10 +176,13 @@ func TestDailyScheduleBuilder_SunTriggersUseConfiguredLocation(t *testing.T) {
 	now := time.Date(2025, 10, 28, 12, 0, 0, 0, time.UTC)
 
 	sunsetAt := func(location Location) time.Time {
-		builder := NewSchedule(location)
+		builder := NewSchedule()
 		builder.OnSunset("0s")
 
-		trigger, err := builder.Build()
+		spec, err := builder.Build()
+		require.NoError(t, err)
+
+		trigger, err := spec.Resolve(location)
 		require.NoError(t, err)
 
 		result := trigger.NextTime(now)
@@ -200,10 +203,13 @@ func TestDailyScheduleBuilder_OmittedSunOffsetMatchesZero(t *testing.T) {
 	now := time.Date(2025, 10, 28, 12, 0, 0, 0, time.UTC)
 
 	sunsetAt := func(offset ...types.DurationString) time.Time {
-		builder := NewSchedule(testLocation)
+		builder := NewSchedule()
 		builder.OnSunset(offset...)
 
-		trigger, err := builder.Build()
+		spec, err := builder.Build()
+		require.NoError(t, err)
+
+		trigger, err := spec.Resolve(testLocation)
 		require.NoError(t, err)
 
 		result := trigger.NextTime(now)
@@ -215,14 +221,14 @@ func TestDailyScheduleBuilder_OmittedSunOffsetMatchesZero(t *testing.T) {
 }
 
 func TestDailyScheduleBuilder_DuplicateTriggers(t *testing.T) {
-	builder := NewSchedule(testLocation)
+	builder := NewSchedule()
 
 	// Add the same fixed time trigger twice
 	builder.OnFixedTime(12, 30)
 	builder.OnFixedTime(12, 30)
 
 	assert.Len(t, builder.errors, 1)
-	assert.Len(t, builder.triggers, 1) // Only one should be added
+	assert.Len(t, builder.specs, 1) // Only one should be added
 	assert.Contains(t, builder.errors[0].Error(), "duplicate trigger")
 }
 
@@ -263,13 +269,16 @@ func TestDailyScheduleBuilder_Build_Success(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewSchedule(testLocation)
+			builder := NewSchedule()
 			tt.setupBuilder(builder)
 
-			trigger, err := builder.Build()
+			spec, err := builder.Build()
 
 			require.NoError(t, err)
-			require.NotNil(t, trigger)
+			require.NotNil(t, spec)
+
+			trigger, err := spec.Resolve(testLocation)
+			require.NoError(t, err)
 			assert.Equal(t, tt.expectedType, fmt.Sprintf("%T", trigger))
 
 			// Test that the trigger works
@@ -318,7 +327,7 @@ func TestDailyScheduleBuilder_Build_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewSchedule(testLocation)
+			builder := NewSchedule()
 			tt.setupBuilder(builder)
 
 			trigger, err := builder.Build()
@@ -335,7 +344,7 @@ func TestDailyScheduleBuilder_Build_Errors(t *testing.T) {
 }
 
 func TestDailyScheduleBuilder_Chaining(t *testing.T) {
-	builder := NewSchedule(testLocation)
+	builder := NewSchedule()
 
 	// Test method chaining
 	result := builder.
@@ -344,17 +353,20 @@ func TestDailyScheduleBuilder_Chaining(t *testing.T) {
 		OnSunrise("30m")
 
 	assert.Equal(t, builder, result)
-	assert.Len(t, builder.triggers, 3)
+	assert.Len(t, builder.specs, 3)
 	assert.Empty(t, builder.errors)
 }
 
 func TestDailyScheduleBuilder_NextTime_Integration(t *testing.T) {
-	builder := NewSchedule(testLocation)
+	builder := NewSchedule()
 	builder.OnFixedTime(8, 0).
 		OnFixedTime(12, 0).
 		OnFixedTime(18, 0)
 
-	trigger, err := builder.Build()
+	spec, err := builder.Build()
+	require.NoError(t, err)
+
+	trigger, err := spec.Resolve(testLocation)
 	require.NoError(t, err)
 
 	// Test at different times

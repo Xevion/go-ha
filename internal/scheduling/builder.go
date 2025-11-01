@@ -8,31 +8,28 @@ import (
 )
 
 type DailyScheduleBuilder struct {
-	location Location
-	errors   []error
-	hashes   map[uint64]bool
-	triggers []Trigger
+	errors []error
+	hashes map[uint64]bool
+	specs  []Spec
 }
 
-// NewSchedule returns a builder whose sun triggers resolve against location.
-func NewSchedule(location Location) *DailyScheduleBuilder {
+func NewSchedule() *DailyScheduleBuilder {
 	return &DailyScheduleBuilder{
-		location: location,
-		hashes:   make(map[uint64]bool),
+		hashes: make(map[uint64]bool),
 	}
 }
 
-// tryAddTrigger adds a trigger to the builder if it is not already present.
-// If the trigger is already present, an error will be added to the builder's errors.
+// tryAddSpec adds a spec to the builder if it is not already present.
+// If the spec is already present, an error will be added to the builder's errors.
 // It will return the builder for chaining.
-func (b *DailyScheduleBuilder) tryAddTrigger(trigger Trigger) *DailyScheduleBuilder {
-	hash := trigger.Hash()
+func (b *DailyScheduleBuilder) tryAddSpec(spec Spec) *DailyScheduleBuilder {
+	hash := spec.Hash()
 	if _, ok := b.hashes[hash]; ok {
-		b.errors = append(b.errors, fmt.Errorf("duplicate trigger: %v", trigger))
+		b.errors = append(b.errors, fmt.Errorf("duplicate trigger: %v", spec))
 		return b
 	}
 
-	b.triggers = append(b.triggers, trigger)
+	b.specs = append(b.specs, spec)
 	b.hashes[hash] = true
 
 	return b
@@ -50,12 +47,7 @@ func (b *DailyScheduleBuilder) onSun(sunset bool, offset ...types.DurationString
 		offsetDuration = &parsed
 	}
 
-	return b.tryAddTrigger(&SunTrigger{
-		latitude:  b.location.Latitude,
-		longitude: b.location.Longitude,
-		sunset:    sunset,
-		offset:    offsetDuration,
-	})
+	return b.tryAddSpec(sunSpec{sunset: sunset, offset: offsetDuration})
 }
 
 // OnSunrise adds a trigger for sunrise with an optional offset.
@@ -90,17 +82,24 @@ func (b *DailyScheduleBuilder) OnFixedTime(hour, minute int) *DailyScheduleBuild
 		return b
 	}
 
-	return b.tryAddTrigger(&FixedTimeTrigger{
-		Hour:   hour,
-		Minute: minute,
-	})
+	return b.tryAddSpec(fixedTimeSpec{hour: hour, minute: minute})
 }
 
-// Build returns a Trigger that will trigger at the configured times.
-// It will return an error if any errors occurred during configuration.
-func (b *DailyScheduleBuilder) Build() (Trigger, error) {
-	// If there are no triggers, add an error.
-	if len(b.triggers) == 0 {
+// OnCron adds a trigger driven by a five field cron expression.
+func (b *DailyScheduleBuilder) OnCron(expression string) *DailyScheduleBuilder {
+	if _, err := NewCronTrigger(expression); err != nil {
+		b.errors = append(b.errors, err)
+		return b
+	}
+
+	return b.tryAddSpec(cronSpec{expression: expression})
+}
+
+// Build returns a Spec that resolves to a Trigger once the observer location is
+// known. It will return an error if any errors occurred during configuration.
+func (b *DailyScheduleBuilder) Build() (Spec, error) {
+	// If there are no specs, add an error.
+	if len(b.specs) == 0 {
 		b.errors = append(b.errors, fmt.Errorf("no triggers provided"))
 	}
 
@@ -109,11 +108,11 @@ func (b *DailyScheduleBuilder) Build() (Trigger, error) {
 		return nil, fmt.Errorf("errors occurred: %v", b.errors)
 	}
 
-	// If there is only one trigger, return it.
-	if len(b.triggers) == 1 {
-		return b.triggers[0], nil
+	// If there is only one spec, return it.
+	if len(b.specs) == 1 {
+		return b.specs[0], nil
 	}
 
-	// Otherwise, return a composite schedule that combines all the triggers.
-	return &CompositeDailySchedule{triggers: b.triggers}, nil
+	// Otherwise, return a composite spec that combines all the specs.
+	return compositeSpec{specs: b.specs}, nil
 }
