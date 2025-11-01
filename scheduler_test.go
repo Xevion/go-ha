@@ -68,6 +68,31 @@ func TestSchedulerRequeueAdvancesToTheFollowingDay(t *testing.T) {
 	assert.Equal(t, time.Date(2025, time.November, 2, 18, 0, 0, 0, time.Local), requeued.fireAt)
 }
 
+func TestSchedulerRequeueAdvancesFromTheFireTime(t *testing.T) {
+	s := newScheduler(internal.NewFakeClock(schedulerBase))
+	s.add(fixedAt(18, 0), noop)
+
+	entry := s.pop()
+	require.NotNil(t, entry)
+	first := entry.fireAt
+
+	// The clock has not moved past the slot yet. Requeueing must still advance to
+	// the following occurrence rather than resolving the same one again.
+	require.True(t, s.requeue(entry))
+
+	second := s.pop()
+	require.NotNil(t, second)
+
+	assert.True(t, second.fireAt.After(first), "requeue must advance past the slot it just ran")
+
+	// Nov 2 is the DST fall back, so the following occurrence is 25 absolute
+	// hours out while still landing on 18:00 local. Assert the wall clock, not
+	// the elapsed duration.
+	assert.Equal(t, first.Day()+1, second.fireAt.Day())
+	assert.Equal(t, 18, second.fireAt.Hour())
+	assert.Zero(t, second.fireAt.Minute())
+}
+
 func TestSchedulerRunsTheEntryCallback(t *testing.T) {
 	s := newScheduler(internal.NewFakeClock(schedulerBase))
 

@@ -65,7 +65,7 @@ func (s *scheduler) pop() *scheduledEntry {
 // requeue puts an entry back for its following occurrence, or drops it when the
 // trigger has none left.
 func (s *scheduler) requeue(entry *scheduledEntry) bool {
-	next := entry.trigger.NextTime(s.clock.Now())
+	next := entry.trigger.NextTime(entry.fireAt)
 	if next == nil {
 		slog.Warn("Trigger has no further occurrence, dropping", "trigger", entry.trigger)
 		return false
