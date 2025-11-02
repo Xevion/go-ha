@@ -204,16 +204,22 @@ func (app *App) location() scheduling.Location {
 
 func (app *App) RegisterIntervals(intervals ...Interval) {
 	for _, i := range intervals {
-		if i.frequency == 0 {
-			slog.Error("A schedule must use either set frequency via Every()")
+		if i.triggerErr != nil {
+			slog.Error("Invalid interval", "error", i.triggerErr)
+			panic(i.triggerErr)
+		}
+		if i.trigger == nil {
+			slog.Error("An interval must set a frequency via Every()")
 			panic(ErrInvalidArgs)
 		}
 
-		i.nextRunTime = internal.ParseTime(app.clock, string(i.startTime)).StdTime()
-		now := time.Now()
-		for i.nextRunTime.Before(now) {
-			i.nextRunTime = i.nextRunTime.Add(i.frequency)
+		next := i.trigger.NextTime(app.clock.Now())
+		if next == nil {
+			slog.Warn("Interval has no next occurrence, not scheduling", "interval", i)
+			continue
 		}
+
+		i.nextRunTime = *next
 		app.intervals.Put(Item{
 			Value:    i,
 			Priority: float64(i.nextRunTime.Unix()),

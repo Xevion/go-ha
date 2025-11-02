@@ -6,12 +6,18 @@ import (
 	"time"
 
 	"github.com/Xevion/go-ha/internal"
+	"github.com/Xevion/go-ha/internal/scheduling"
 	"github.com/Xevion/go-ha/types"
 )
 
 type IntervalCallback func(*Service, StateReader)
 
 type Interval struct {
+	// Drives when the interval fires. Built by Every, anchored by StartingAt.
+	trigger *scheduling.IntervalTrigger
+	// Any error raised while describing the interval, surfaced at registration.
+	triggerErr error
+
 	frequency   time.Duration
 	callback    IntervalCallback
 	startTime   types.TimeString
@@ -83,12 +89,16 @@ func (ib intervalBuilder) Call(callback IntervalCallback) intervalBuilderCall {
 func (ib intervalBuilderCall) Every(s types.DurationString) intervalBuilderEnd {
 	d := internal.ParseDuration(string(s))
 	ib.interval.frequency = d
+	ib.interval.trigger, ib.interval.triggerErr = scheduling.NewIntervalTrigger(d)
 	return intervalBuilderEnd(ib)
 }
 
 // StartingAt takes a TimeString ("HH:MM") when this interval will start running for the day.
 func (ib intervalBuilderEnd) StartingAt(s types.TimeString) intervalBuilderEnd {
 	ib.interval.startTime = s
+	if ib.interval.trigger != nil {
+		ib.interval.trigger.WithEpoch(internal.ParseTime(internal.RealClock{}, string(s)).StdTime())
+	}
 	return ib
 }
 
@@ -211,7 +221,12 @@ func popInterval(a *App) Interval {
 }
 
 func requeueInterval(a *App, i Interval) {
-	i.nextRunTime = i.nextRunTime.Add(i.frequency)
+	next := i.trigger.NextTime(i.nextRunTime)
+	if next == nil {
+		slog.Warn("Interval has no further occurrence, dropping", "interval", i)
+		return
+	}
+	i.nextRunTime = *next
 
 	a.intervals.Put(Item{
 		Value:    i,
