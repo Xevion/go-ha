@@ -18,11 +18,10 @@ type Interval struct {
 	// Any error raised while describing the interval, surfaced at registration.
 	triggerErr error
 
-	frequency   time.Duration
-	callback    IntervalCallback
-	startTime   types.TimeString
-	endTime     types.TimeString
-	nextRunTime time.Time
+	frequency time.Duration
+	callback  IntervalCallback
+	startTime types.TimeString
+	endTime   types.TimeString
 
 	exceptionDates  []time.Time
 	exceptionRanges []types.TimeRange
@@ -157,7 +156,7 @@ func (sb intervalBuilderEnd) Build() Interval {
 
 // app.Start() functions
 func runIntervals(a *App) {
-	if a.intervals.Len() == 0 {
+	if a.intervals.len() == 0 {
 		return
 	}
 
@@ -169,27 +168,23 @@ func runIntervals(a *App) {
 		default:
 		}
 
-		i := popInterval(a)
+		// Run callbacks for everything already due, in case slots overlapped.
+		a.intervals.runDue(a.clock.Now())
 
-		// run callback for all intervals before now in case they overlap
-		for i.nextRunTime.Before(time.Now()) {
-			i.maybeRunCallback(a)
-			requeueInterval(a, i)
-
-			i = popInterval(a)
+		entry := a.intervals.peek()
+		if entry == nil {
+			slog.Info("No intervals left to run")
+			return
 		}
 
 		// Use context-aware sleep
 		select {
-		case <-time.After(time.Until(i.nextRunTime)):
-			// Time elapsed, continue
+		case <-time.After(time.Until(entry.fireAt)):
+			// Time elapsed, the next pass runs it
 		case <-a.ctx.Done():
 			slog.Info("Intervals goroutine shutting down")
 			return
 		}
-
-		i.maybeRunCallback(a)
-		requeueInterval(a, i)
 	}
 }
 
@@ -213,23 +208,4 @@ func (i Interval) maybeRunCallback(a *App) {
 		return
 	}
 	go i.callback(a.service, a.state)
-}
-
-func popInterval(a *App) Interval {
-	i, _ := a.intervals.Get(1)
-	return i[0].(Item).Value.(Interval)
-}
-
-func requeueInterval(a *App, i Interval) {
-	next := i.trigger.NextTime(i.nextRunTime)
-	if next == nil {
-		slog.Warn("Interval has no further occurrence, dropping", "interval", i)
-		return
-	}
-	i.nextRunTime = *next
-
-	a.intervals.Put(Item{
-		Value:    i,
-		Priority: float64(i.nextRunTime.Unix()),
-	})
 }

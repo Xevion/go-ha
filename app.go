@@ -36,7 +36,7 @@ type App struct {
 	state   *state
 
 	schedules         *scheduler
-	intervals         *queue.PriorityQueue
+	intervals         *scheduler
 	entityListeners   map[string][]*EntityListener
 	entityListenersId int64
 	eventListeners    map[string][]*EventListener
@@ -127,7 +127,7 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 		service:         service,
 		state:           state,
 		schedules:       newScheduler(clock),
-		intervals:       queue.NewPriorityQueue(100, false),
+		intervals:       newScheduler(clock),
 		entityListeners: map[string][]*EntityListener{},
 		eventListeners:  map[string][]*EventListener{},
 	}, nil
@@ -213,17 +213,7 @@ func (app *App) RegisterIntervals(intervals ...Interval) {
 			panic(ErrInvalidArgs)
 		}
 
-		next := i.trigger.NextTime(app.clock.Now())
-		if next == nil {
-			slog.Warn("Interval has no next occurrence, not scheduling", "interval", i)
-			continue
-		}
-
-		i.nextRunTime = *next
-		app.intervals.Put(Item{
-			Value:    i,
-			Priority: float64(i.nextRunTime.Unix()),
-		})
+		app.intervals.add(i.trigger, func() { i.maybeRunCallback(app) })
 	}
 }
 
