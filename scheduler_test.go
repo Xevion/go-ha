@@ -106,6 +106,77 @@ func TestSchedulerRunsTheEntryCallback(t *testing.T) {
 	assert.True(t, fired, "the callback registered with add must be the one queued")
 }
 
+func TestSchedulerRunDue(t *testing.T) {
+	t.Run("fires nothing before the first slot", func(t *testing.T) {
+		clock := internal.NewFakeClock(schedulerBase)
+		s := newScheduler(clock)
+
+		var fired []string
+		s.add(fixedAt(14, 0), func() { fired = append(fired, "14:00") })
+
+		assert.Zero(t, s.runDue(clock.Now()))
+		assert.Empty(t, fired)
+		assert.Equal(t, 1, s.len())
+	})
+
+	t.Run("catches up across several missed slots in order", func(t *testing.T) {
+		clock := internal.NewFakeClock(schedulerBase)
+		s := newScheduler(clock)
+
+		var fired []string
+		s.add(fixedAt(16, 0), func() { fired = append(fired, "16:00") })
+		s.add(fixedAt(14, 0), func() { fired = append(fired, "14:00") })
+		s.add(fixedAt(15, 0), func() { fired = append(fired, "15:00") })
+
+		// One jump past all three, as a suspended process would see.
+		clock.Advance(3 * time.Hour)
+
+		assert.Equal(t, 3, s.runDue(clock.Now()))
+		assert.Equal(t, []string{"14:00", "15:00", "16:00"}, fired)
+		assert.Equal(t, 3, s.len(), "each schedule must be left queued exactly once")
+	})
+
+	t.Run("fires a slot landed on exactly", func(t *testing.T) {
+		clock := internal.NewFakeClock(schedulerBase)
+		s := newScheduler(clock)
+
+		fired := 0
+		s.add(fixedAt(14, 0), func() { fired++ })
+
+		clock.Set(time.Date(2025, time.November, 1, 14, 0, 0, 0, time.Local))
+
+		assert.Equal(t, 1, s.runDue(clock.Now()))
+		assert.Equal(t, 1, fired)
+	})
+
+	t.Run("a repeated pass does not fire again", func(t *testing.T) {
+		clock := internal.NewFakeClock(schedulerBase)
+		s := newScheduler(clock)
+
+		fired := 0
+		s.add(fixedAt(14, 0), func() { fired++ })
+
+		clock.Advance(time.Hour)
+		require.Equal(t, 1, s.runDue(clock.Now()))
+		assert.Zero(t, s.runDue(clock.Now()), "the requeued slot is a day out")
+		assert.Equal(t, 1, fired)
+	})
+}
+
+func TestSchedulerPeekLeavesTheEntryQueued(t *testing.T) {
+	s := newScheduler(internal.NewFakeClock(schedulerBase))
+	s.add(fixedAt(18, 0), noop)
+
+	first := s.peek()
+	require.NotNil(t, first)
+	assert.Equal(t, 1, s.len())
+
+	second := s.peek()
+	require.NotNil(t, second)
+	assert.Equal(t, first.fireAt, second.fireAt)
+	assert.Equal(t, 1, s.len())
+}
+
 func TestSchedulerDropsExhaustedTrigger(t *testing.T) {
 	december := time.Date(2025, time.December, 21, 12, 0, 0, 0, time.UTC)
 	s := newScheduler(internal.NewFakeClock(december))

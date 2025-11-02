@@ -76,6 +76,37 @@ func (s *scheduler) requeue(entry *scheduledEntry) bool {
 	return true
 }
 
+// peek returns the entry due soonest without removing it.
+func (s *scheduler) peek() *scheduledEntry {
+	entry := s.pop()
+	if entry != nil {
+		s.push(entry)
+	}
+	return entry
+}
+
+// runDue fires every entry due at or before now, requeueing each, and reports
+// how many ran. A process suspended across several slots catches up here rather
+// than losing them.
+func (s *scheduler) runDue(now time.Time) int {
+	fired := 0
+	for {
+		entry := s.pop()
+		if entry == nil {
+			return fired
+		}
+
+		if entry.fireAt.After(now) {
+			s.push(entry)
+			return fired
+		}
+
+		entry.run()
+		s.requeue(entry)
+		fired++
+	}
+}
+
 func (s *scheduler) len() int {
 	return s.queue.Len()
 }

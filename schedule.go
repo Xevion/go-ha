@@ -191,22 +191,14 @@ func runSchedules(a *App) {
 		default:
 		}
 
-		entry := a.schedules.pop()
+		// Run callbacks for everything already due, in case slots overlapped or
+		// the process was suspended across several of them.
+		a.schedules.runDue(a.clock.Now())
+
+		entry := a.schedules.peek()
 		if entry == nil {
 			slog.Info("No schedules left to run")
 			return
-		}
-
-		// Run callback for all schedules that are overdue in case they overlap
-		for entry.fireAt.Before(a.clock.Now()) {
-			entry.run()
-			a.schedules.requeue(entry)
-
-			entry = a.schedules.pop()
-			if entry == nil {
-				slog.Info("No schedules left to run")
-				return
-			}
 		}
 
 		slog.Info("Next schedule", "start_time", entry.fireAt)
@@ -214,14 +206,11 @@ func runSchedules(a *App) {
 		// Wait until the next schedule time or context cancellation
 		select {
 		case <-time.After(time.Until(entry.fireAt)):
-			// Time elapsed, continue
+			// Time elapsed, the next pass runs it
 		case <-a.ctx.Done():
 			slog.Info("Schedules goroutine shutting down")
 			return
 		}
-
-		entry.run()
-		a.schedules.requeue(entry)
 	}
 }
 
