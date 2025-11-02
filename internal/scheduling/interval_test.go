@@ -109,6 +109,49 @@ func TestIntervalTrigger_NextTime(t *testing.T) {
 
 }
 
+func TestIntervalTrigger_NextTimeAcrossDSTFallBack(t *testing.T) {
+	chicago, err := time.LoadLocation("America/Chicago")
+	require.NoError(t, err)
+
+	// 2025-11-02 is the fall back. 01:00 through 02:00 runs on CDT, then the
+	// clock returns to 01:00 on CST and the wall clock hour repeats.
+	epoch := time.Date(2025, 11, 2, 1, 0, 0, 0, chicago)
+	trigger, err := NewIntervalTrigger(30 * time.Minute)
+	require.NoError(t, err)
+	trigger.WithEpoch(epoch)
+
+	cursor := time.Date(2025, 11, 2, 0, 30, 0, 0, chicago)
+	got := make([]time.Time, 0, 5)
+	for i := 0; i < 5; i++ {
+		next := trigger.NextTime(cursor)
+		require.NotNil(t, next)
+		got = append(got, *next)
+		cursor = *next
+	}
+
+	for i := 1; i < len(got); i++ {
+		assert.Equal(t, 30*time.Minute, got[i].Sub(got[i-1]),
+			"the interval must stay 30 real minutes wide across the transition")
+	}
+
+	// The repeated wall clock reading is correct, these are distinct instants.
+	assert.Equal(t, "01:30", got[0].Format("15:04"))
+	assert.Equal(t, "01:00", got[1].Format("15:04"))
+	assert.NotEqual(t, got[0].Unix(), got[1].Unix())
+}
+
+func TestIntervalTrigger_NextTimeReportsLocalTime(t *testing.T) {
+	trigger, err := NewIntervalTrigger(30 * time.Minute)
+	require.NoError(t, err)
+
+	now := time.Date(2025, 11, 2, 0, 30, 0, 0, time.Local)
+	next := trigger.NextTime(now)
+	require.NotNil(t, next)
+
+	assert.Equal(t, time.Local.String(), next.Location().String(),
+		"an interval with no epoch must report local time, as the fixed time and sun triggers do")
+}
+
 func TestIntervalTrigger_Hash(t *testing.T) {
 	t.Run("stable hash for same configuration", func(t *testing.T) {
 		trigger1, _ := NewIntervalTrigger(time.Hour, 30*time.Minute)
