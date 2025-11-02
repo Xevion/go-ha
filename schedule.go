@@ -117,6 +117,16 @@ func (sb scheduleBuilderCall) Sunset(offset ...types.DurationString) scheduleBui
 	return scheduleBuilderEnd(sb)
 }
 
+// Cron configures the schedule from a five field cron expression, in the order
+// minute, hour, day of month, month, day of week.
+// Examples:
+//   - Cron("0 7 * * 1-5") - 07:00 on weekdays
+//   - Cron("*/15 * * * *") - every quarter hour
+func (sb scheduleBuilderCall) Cron(expression string) scheduleBuilderEnd {
+	sb.schedule.spec, sb.schedule.specErr = scheduling.NewSchedule().OnCron(expression).Build()
+	return scheduleBuilderEnd(sb)
+}
+
 // ExceptionDates adds dates when this schedule should NOT run.
 // You can pass multiple dates: ExceptionDates(date1, date2, date3)
 func (sb scheduleBuilderEnd) ExceptionDates(t time.Time, tl ...time.Time) scheduleBuilderEnd {
