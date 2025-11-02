@@ -49,10 +49,11 @@ func TestIntervalTrigger_NextTime(t *testing.T) {
 
 	t.Run("single interval no epoch", func(t *testing.T) {
 		trigger, _ := NewIntervalTrigger(time.Hour)
-		// With a zero epoch, NextTime should calculate from the last hour boundary.
+		// With a zero epoch, NextTime calculates from the last hour boundary and
+		// reports it in local time, so compare the instant rather than the fields.
 		next := trigger.NextTime(now)
 		expected := time.Date(2024, 7, 25, 13, 0, 0, 0, time.UTC)
-		assert.Equal(t, expected, *next)
+		assert.True(t, expected.Equal(*next), "expected %s, got %s", expected, *next)
 	})
 
 	t.Run("single interval with aligned epoch", func(t *testing.T) {

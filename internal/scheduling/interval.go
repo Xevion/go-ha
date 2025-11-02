@@ -50,9 +50,12 @@ func (t *IntervalTrigger) NextTime(now time.Time) *time.Time {
 		return nil
 	}
 
+	// Cycle arithmetic is over absolute durations, so the epoch's location only
+	// decides how the emitted instants report themselves. Default to local, to
+	// match the fixed time and sun triggers.
 	epoch := t.epoch
 	if epoch.IsZero() {
-		epoch = time.Unix(0, 0).UTC()
+		epoch = time.Unix(0, 0).Local()
 	}
 
 	// If the current time is before the epoch, the next time is the first one in the cycle.
