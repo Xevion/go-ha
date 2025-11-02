@@ -54,27 +54,41 @@ func (t *FixedTimeTrigger) Hash() uint64 {
 	return h.Sum64()
 }
 
-// NextTime returns the next time the sun will rise or set. If an offset is provided, it will be added to the calculated time.
+// sunSearchDays bounds how far ahead NextTime looks. Above the polar circles
+// the sun can stay up or down for months, and no schedule is served by scanning
+// that far.
+const sunSearchDays = 4
+
+// NextTime returns the next time the sun will rise or set, with the offset
+// applied. It scans forward day by day: today's event has usually passed by the
+// time the scheduler asks, and the offset can push it either side of now.
 func (t *SunTrigger) NextTime(now time.Time) *time.Time {
-	var sun time.Time
+	for day := range sunSearchDays {
+		d := now.AddDate(0, 0, day)
 
-	if t.sunset {
-		_, sun = sunrise.SunriseSunset(t.latitude, t.longitude, now.Year(), now.Month(), now.Day())
-	} else {
-		sun, _ = sunrise.SunriseSunset(t.latitude, t.longitude, now.Year(), now.Month(), now.Day())
+		var sun time.Time
+		if t.sunset {
+			_, sun = sunrise.SunriseSunset(t.latitude, t.longitude, d.Year(), d.Month(), d.Day())
+		} else {
+			sun, _ = sunrise.SunriseSunset(t.latitude, t.longitude, d.Year(), d.Month(), d.Day())
+		}
+
+		// The sun neither rises nor sets on this day at this latitude.
+		if sun.IsZero() {
+			continue
+		}
+
+		sun = sun.Local()
+		if t.offset != nil && *t.offset != 0 {
+			sun = sun.Add(*t.offset)
+		}
+
+		if sun.After(now) {
+			return &sun
+		}
 	}
 
-	// In the case that the sun does not rise or set on the given day, return nil
-	if sun.IsZero() {
-		return nil
-	}
-
-	sun = sun.Local() // Convert to local time
-	if t.offset != nil && *t.offset != 0 {
-		sun = sun.Add(*t.offset) // Add the offset if provided and not zero
-	}
-
-	return &sun
+	return nil
 }
 
 // Hash returns a stable hash value for the SunTrigger

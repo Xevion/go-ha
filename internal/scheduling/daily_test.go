@@ -310,3 +310,35 @@ func TestTriggerInterface(t *testing.T) {
 	var _ Trigger = &SunTrigger{}
 	var _ Trigger = &CompositeDailySchedule{}
 }
+
+// NextTime is called by the scheduler with the instant the trigger just fired,
+// to find the one after it. Returning that same instant makes the run loop fire
+// and requeue the entry forever without advancing.
+func TestSunTriggerAdvancesPastTheGivenTime(t *testing.T) {
+	for _, sunset := range []bool{false, true} {
+		trig := &SunTrigger{latitude: 29.42, longitude: -98.49, sunset: sunset}
+
+		first := trig.NextTime(time.Date(2025, 10, 15, 3, 0, 0, 0, time.Local))
+		require.NotNil(t, first)
+
+		second := trig.NextTime(*first)
+		require.NotNil(t, second)
+		assert.True(t, second.After(*first),
+			"sunset=%t: requeueing from %v returned %v", sunset, *first, *second)
+	}
+}
+
+func TestSunTriggerAppliesOffsetBeforeComparing(t *testing.T) {
+	offset := -30 * time.Minute
+	trig := &SunTrigger{latitude: 29.42, longitude: -98.49, sunset: true, offset: &offset}
+
+	first := trig.NextTime(time.Date(2025, 10, 15, 3, 0, 0, 0, time.Local))
+	require.NotNil(t, first)
+
+	second := trig.NextTime(*first)
+	require.NotNil(t, second)
+	assert.True(t, second.After(*first))
+	gap := second.Sub(*first)
+	assert.Greater(t, gap, 23*time.Hour, "consecutive sunsets are about a day apart")
+	assert.Less(t, gap, 25*time.Hour)
+}
