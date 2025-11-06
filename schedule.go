@@ -130,7 +130,7 @@ func (sb scheduleBuilderCall) Cron(expression string) scheduleBuilderEnd {
 // ExceptionDates adds dates when this schedule should NOT run.
 // You can pass multiple dates: ExceptionDates(date1, date2, date3)
 func (sb scheduleBuilderEnd) ExceptionDates(t time.Time, tl ...time.Time) scheduleBuilderEnd {
-	sb.schedule.exceptionDates = append(tl, t)
+	sb.schedule.exceptionDates = append(append(sb.schedule.exceptionDates, t), tl...)
 	return sb
 }
 
@@ -138,7 +138,7 @@ func (sb scheduleBuilderEnd) ExceptionDates(t time.Time, tl ...time.Time) schedu
 // If no dates are specified, the schedule runs on all dates.
 // You can pass multiple dates: OnlyOnDates(date1, date2, date3)
 func (sb scheduleBuilderEnd) OnlyOnDates(t time.Time, tl ...time.Time) scheduleBuilderEnd {
-	sb.schedule.allowlistDates = append(tl, t)
+	sb.schedule.allowlistDates = append(append(sb.schedule.allowlistDates, t), tl...)
 	return sb
 }
 

@@ -85,7 +85,7 @@ func (b eventListenerBuilder3) Throttle(s types.DurationString) eventListenerBui
 }
 
 func (b eventListenerBuilder3) ExceptionDates(t time.Time, tl ...time.Time) eventListenerBuilder3 {
-	b.eventListener.exceptionDates = append(tl, t)
+	b.eventListener.exceptionDates = append(append(b.eventListener.exceptionDates, t), tl...)
 	return b
 }
 

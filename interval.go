@@ -108,7 +108,7 @@ func (ib intervalBuilderEnd) EndingAt(s types.TimeString) intervalBuilderEnd {
 }
 
 func (ib intervalBuilderEnd) ExceptionDates(t time.Time, tl ...time.Time) intervalBuilderEnd {
-	ib.interval.exceptionDates = append(tl, t)
+	ib.interval.exceptionDates = append(append(ib.interval.exceptionDates, t), tl...)
 	return ib
 }
 

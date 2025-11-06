@@ -138,7 +138,7 @@ func (b elBuilder3) Throttle(s types.DurationString) elBuilder3 {
 }
 
 func (b elBuilder3) ExceptionDates(t time.Time, tl ...time.Time) elBuilder3 {
-	b.entityListener.exceptionDates = append(tl, t)
+	b.entityListener.exceptionDates = append(append(b.entityListener.exceptionDates, t), tl...)
 	return b
 }
 
