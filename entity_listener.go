@@ -25,8 +25,7 @@ type EntityListener struct {
 	delay      time.Duration
 	delayTimer *time.Timer
 
-	exceptionDates  []time.Time
-	exceptionRanges []types.TimeRange
+	dateFilter
 
 	runOnStartup          bool
 	runOnStartupCompleted bool
@@ -138,12 +137,12 @@ func (b elBuilder3) Throttle(s types.DurationString) elBuilder3 {
 }
 
 func (b elBuilder3) ExceptionDates(t time.Time, tl ...time.Time) elBuilder3 {
-	b.entityListener.exceptionDates = append(append(b.entityListener.exceptionDates, t), tl...)
+	b.entityListener.addExceptions(t, tl...)
 	return b
 }
 
 func (b elBuilder3) ExceptionRange(start, end time.Time) elBuilder3 {
-	b.entityListener.exceptionRanges = append(b.entityListener.exceptionRanges, types.TimeRange{Start: start, End: end})
+	b.entityListener.addRange(start, end)
 	return b
 }
 

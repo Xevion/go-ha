@@ -23,8 +23,7 @@ type Interval struct {
 	startTime types.TimeString
 	endTime   types.TimeString
 
-	exceptionDates  []time.Time
-	exceptionRanges []types.TimeRange
+	dateFilter
 
 	enabledEntities  []internal.EnabledDisabledInfo
 	disabledEntities []internal.EnabledDisabledInfo
@@ -108,15 +107,12 @@ func (ib intervalBuilderEnd) EndingAt(s types.TimeString) intervalBuilderEnd {
 }
 
 func (ib intervalBuilderEnd) ExceptionDates(t time.Time, tl ...time.Time) intervalBuilderEnd {
-	ib.interval.exceptionDates = append(append(ib.interval.exceptionDates, t), tl...)
+	ib.interval.addExceptions(t, tl...)
 	return ib
 }
 
 func (ib intervalBuilderEnd) ExceptionRange(start, end time.Time) intervalBuilderEnd {
-	ib.interval.exceptionRanges = append(
-		ib.interval.exceptionRanges,
-		types.TimeRange{Start: start, End: end},
-	)
+	ib.interval.addRange(start, end)
 	return ib
 }
 

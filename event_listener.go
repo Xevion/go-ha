@@ -20,8 +20,7 @@ type EventListener struct {
 	throttle     time.Duration
 	lastRan      *carbon.Carbon
 
-	exceptionDates  []time.Time
-	exceptionRanges []types.TimeRange
+	dateFilter
 
 	enabledEntities  []internal.EnabledDisabledInfo
 	disabledEntities []internal.EnabledDisabledInfo
@@ -85,12 +84,12 @@ func (b eventListenerBuilder3) Throttle(s types.DurationString) eventListenerBui
 }
 
 func (b eventListenerBuilder3) ExceptionDates(t time.Time, tl ...time.Time) eventListenerBuilder3 {
-	b.eventListener.exceptionDates = append(append(b.eventListener.exceptionDates, t), tl...)
+	b.eventListener.addExceptions(t, tl...)
 	return b
 }
 
 func (b eventListenerBuilder3) ExceptionRange(start, end time.Time) eventListenerBuilder3 {
-	b.eventListener.exceptionRanges = append(b.eventListener.exceptionRanges, types.TimeRange{Start: start, End: end})
+	b.eventListener.addRange(start, end)
 	return b
 }
 
