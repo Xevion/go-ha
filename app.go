@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Workiva/go-datastructures/queue"
 	"github.com/dromara/carbon/v2"
 	"github.com/gorilla/websocket"
 	sunriseLib "github.com/nathan-osman/go-sunrise"
 
-	"github.com/Workiva/go-datastructures/queue"
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/internal/connect"
 	"github.com/Xevion/go-ha/internal/scheduling"

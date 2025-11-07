@@ -100,8 +100,8 @@ func TestAppState(t *testing.T) {
 		state: &state{},
 	}
 
-	state := app.State()
-	if state == nil {
+	s := app.State()
+	if s == nil {
 		t.Error("State() returned nil")
 	}
 }
@@ -125,11 +125,10 @@ func TestAppWithNilFields(t *testing.T) {
 		t.Error("Services() should return nil when service is nil")
 	}
 
-	// Test State with nil state
-	state := app.State()
-	// When state is nil, State returns a typed nil (*state)
-	// This is the correct behavior - the interface is not nil but the value is nil
-	_ = state // Just ensure it doesn't panic
+	// When the concrete state is nil, State returns a typed nil, so the
+	// interface is non-nil while the value inside it is not. Only assert that
+	// reaching for it does not panic.
+	_ = app.State()
 }
 
 func TestAppWithWebsocketConnection(t *testing.T) {
