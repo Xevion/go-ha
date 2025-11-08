@@ -3,6 +3,7 @@ package scheduling
 import (
 	"fmt"
 	"hash/fnv"
+	"strings"
 	"time"
 )
 
@@ -81,6 +82,14 @@ func (t *IntervalTrigger) NextTime(now time.Time) *time.Time {
 	nextCycleStart := currentCycleStart.Add(t.totalDuration)
 	next := nextCycleStart.Add(t.intervals[0])
 	return &next
+}
+
+func (t *IntervalTrigger) String() string {
+	parts := make([]string, 0, len(t.intervals))
+	for _, d := range t.intervals {
+		parts = append(parts, d.String())
+	}
+	return "every " + strings.Join(parts, " then ")
 }
 
 // Hash returns a stable hash value for the IntervalTrigger.

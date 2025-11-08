@@ -3,6 +3,7 @@ package scheduling
 import (
 	"fmt"
 	"hash/fnv"
+	"strings"
 	"time"
 
 	"github.com/Xevion/go-ha/internal"
@@ -45,6 +46,10 @@ func (t *FixedTimeTrigger) NextTime(now time.Time) *time.Time {
 	}
 
 	return internal.Ptr(next.StdTime().Local())
+}
+
+func (t *FixedTimeTrigger) String() string {
+	return fmt.Sprintf("%02d:%02d", t.Hour, t.Minute)
 }
 
 // Hash returns a stable hash value for the FixedTimeTrigger
@@ -91,6 +96,10 @@ func (t *SunTrigger) NextTime(now time.Time) *time.Time {
 	return nil
 }
 
+func (t *SunTrigger) String() string {
+	return fmt.Sprintf("%s at %.4f,%.4f", sunLabel(t.sunset, t.offset), t.latitude, t.longitude)
+}
+
 // Hash returns a stable hash value for the SunTrigger
 func (t *SunTrigger) Hash() uint64 {
 	h := fnv.New64()
@@ -118,6 +127,14 @@ func (c *CompositeDailySchedule) NextTime(now time.Time) *time.Time {
 	}
 
 	return best
+}
+
+func (c *CompositeDailySchedule) String() string {
+	parts := make([]string, 0, len(c.triggers))
+	for _, trigger := range c.triggers {
+		parts = append(parts, fmt.Sprint(trigger))
+	}
+	return strings.Join(parts, ", ")
 }
 
 // Hash returns a stable hash value for the CompositeDailySchedule

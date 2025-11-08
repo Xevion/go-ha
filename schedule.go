@@ -72,7 +72,13 @@ func NewDailySchedule() scheduleBuilder {
 
 // String returns a human-readable representation of the schedule.
 func (s DailySchedule) String() string {
-	return fmt.Sprintf("Schedule{ call %q }", internal.GetFunctionName(s.callback))
+	if s.spec == nil {
+		return fmt.Sprintf("Schedule{ call %q }", internal.GetFunctionName(s.callback))
+	}
+	return fmt.Sprintf("Schedule{ call %q daily at %s }",
+		internal.GetFunctionName(s.callback),
+		s.spec,
+	)
 }
 
 // Call sets the callback function that will be executed when the schedule triggers.

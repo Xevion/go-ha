@@ -35,6 +35,10 @@ func (t *CronTrigger) NextTime(now time.Time) *time.Time {
 	return &next
 }
 
+func (t *CronTrigger) String() string {
+	return "cron(" + t.expression + ")"
+}
+
 // Hash returns a stable hash value for the CronTrigger.
 func (t *CronTrigger) Hash() uint64 {
 	h := fnv.New64()

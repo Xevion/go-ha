@@ -3,6 +3,7 @@ package scheduling
 import (
 	"fmt"
 	"hash/fnv"
+	"strings"
 	"time"
 )
 
@@ -12,6 +13,24 @@ import (
 type Spec interface {
 	Resolve(location Location) (Trigger, error)
 	Hash() uint64
+	String() string
+}
+
+// sunLabel renders a sun event and its offset, e.g. "sunset" or "sunrise-30m".
+func sunLabel(sunset bool, offset *time.Duration) string {
+	name := "sunrise"
+	if sunset {
+		name = "sunset"
+	}
+
+	if offset == nil || *offset == 0 {
+		return name
+	}
+	if *offset > 0 {
+		return name + "+" + offset.String()
+	}
+	// Duration.String already carries the sign for negative offsets.
+	return name + offset.String()
 }
 
 type fixedTimeSpec struct {
@@ -27,6 +46,10 @@ func (s fixedTimeSpec) Hash() uint64 {
 	h := fnv.New64()
 	fmt.Fprintf(h, "fixed:%d:%d", s.hour, s.minute)
 	return h.Sum64()
+}
+
+func (s fixedTimeSpec) String() string {
+	return fmt.Sprintf("%02d:%02d", s.hour, s.minute)
 }
 
 type sunSpec struct {
@@ -54,6 +77,10 @@ func (s sunSpec) Hash() uint64 {
 	return h.Sum64()
 }
 
+func (s sunSpec) String() string {
+	return sunLabel(s.sunset, s.offset)
+}
+
 type cronSpec struct {
 	expression string
 }
@@ -66,6 +93,10 @@ func (s cronSpec) Hash() uint64 {
 	h := fnv.New64()
 	fmt.Fprintf(h, "cron:%s", s.expression)
 	return h.Sum64()
+}
+
+func (s cronSpec) String() string {
+	return "cron(" + s.expression + ")"
 }
 
 type compositeSpec struct {
@@ -90,4 +121,12 @@ func (s compositeSpec) Hash() uint64 {
 		fmt.Fprintf(h, "%d", spec.Hash())
 	}
 	return h.Sum64()
+}
+
+func (s compositeSpec) String() string {
+	parts := make([]string, 0, len(s.specs))
+	for _, spec := range s.specs {
+		parts = append(parts, spec.String())
+	}
+	return strings.Join(parts, ", ")
 }

@@ -220,6 +220,32 @@ func TestDailyScheduleBuilder_OmittedSunOffsetMatchesZero(t *testing.T) {
 	assert.Equal(t, sunsetAt("0s"), sunsetAt(), "an omitted offset must behave as no adjustment")
 }
 
+func TestSpecString(t *testing.T) {
+	tests := []struct {
+		name     string
+		build    func() *DailyScheduleBuilder
+		expected string
+	}{
+		{"fixed time", func() *DailyScheduleBuilder { return NewSchedule().OnFixedTime(7, 5) }, "07:05"},
+		{"midnight", func() *DailyScheduleBuilder { return NewSchedule().OnFixedTime(0, 0) }, "00:00"},
+		{"sunset", func() *DailyScheduleBuilder { return NewSchedule().OnSunset() }, "sunset"},
+		{"sunrise", func() *DailyScheduleBuilder { return NewSchedule().OnSunrise() }, "sunrise"},
+		{"sunrise before", func() *DailyScheduleBuilder { return NewSchedule().OnSunrise("-30m") }, "sunrise-30m0s"},
+		{"sunset after", func() *DailyScheduleBuilder { return NewSchedule().OnSunset("1h") }, "sunset+1h0m0s"},
+		{"zero offset reads as none", func() *DailyScheduleBuilder { return NewSchedule().OnSunset("0s") }, "sunset"},
+		{"cron", func() *DailyScheduleBuilder { return NewSchedule().OnCron("0 7 * * *") }, "cron(0 7 * * *)"},
+		{"composite", func() *DailyScheduleBuilder { return NewSchedule().OnFixedTime(8, 0).OnSunset() }, "08:00, sunset"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec, err := tt.build().Build()
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, spec.String())
+		})
+	}
+}
+
 func TestDailyScheduleBuilder_DuplicateTriggers(t *testing.T) {
 	builder := NewSchedule()
 
