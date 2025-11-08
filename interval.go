@@ -18,7 +18,6 @@ type Interval struct {
 	// Any error raised while describing the interval, surfaced at registration.
 	triggerErr error
 
-	frequency time.Duration
 	callback  IntervalCallback
 	startTime types.TimeString
 	endTime   types.TimeString
@@ -30,7 +29,11 @@ type Interval struct {
 }
 
 func (i Interval) Hash() string {
-	return fmt.Sprint(i.startTime, i.endTime, i.frequency, i.callback, i.exceptionDates, i.exceptionRanges)
+	var trigger uint64
+	if i.trigger != nil {
+		trigger = i.trigger.Hash()
+	}
+	return fmt.Sprint(trigger, i.startTime, i.endTime, i.callback, i.exceptionDates, i.exceptionRanges)
 }
 
 // Call
@@ -51,7 +54,6 @@ type intervalBuilderEnd struct {
 func NewInterval() intervalBuilder {
 	return intervalBuilder{
 		Interval{
-			frequency: 0,
 			startTime: "00:00",
 			endTime:   "00:00",
 		},
@@ -59,9 +61,12 @@ func NewInterval() intervalBuilder {
 }
 
 func (i Interval) String() string {
-	return fmt.Sprintf("Interval{ call %q every %s%s%s }",
+	if i.trigger == nil {
+		return fmt.Sprintf("Interval{ call %q }", internal.GetFunctionName(i.callback))
+	}
+	return fmt.Sprintf("Interval{ call %q %s%s%s }",
 		internal.GetFunctionName(i.callback),
-		i.frequency,
+		i.trigger,
 		formatStartOrEndString(i.startTime, true),
 		formatStartOrEndString(i.endTime, false),
 	)
@@ -86,7 +91,6 @@ func (ib intervalBuilder) Call(callback IntervalCallback) intervalBuilderCall {
 // Every takes a DurationString ("2h", "5m", etc.) to set the frequency of the interval.
 func (ib intervalBuilderCall) Every(s types.DurationString) intervalBuilderEnd {
 	d := internal.ParseDuration(string(s))
-	ib.interval.frequency = d
 	ib.interval.trigger, ib.interval.triggerErr = scheduling.NewIntervalTrigger(d)
 	return intervalBuilderEnd(ib)
 }
