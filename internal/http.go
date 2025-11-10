@@ -29,7 +29,7 @@ func NewHttpClient(ctx context.Context, baseUrl *url.URL, token string) *HttpCli
 		AddRetryConditions(func(r *resty.Response, err error) bool {
 			return err != nil || (r.StatusCode() >= 500 && r.StatusCode() != 403)
 		}).
-		SetHeader("User-Agent", "go-ha/"+currentVersion).
+		SetHeader("User-Agent", "go-ha/"+Version).
 		SetContext(ctx)
 
 	return &HttpClient{

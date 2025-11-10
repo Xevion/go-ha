@@ -13,9 +13,8 @@ type EnabledDisabledInfo struct {
 	RunOnError bool
 }
 
-var (
-	currentVersion = "0.7.1"
-)
+// Version is the go-ha release this build corresponds to.
+const Version = "0.8.0"
 
 var (
 	id atomic.Int64 // default value is 0

@@ -283,9 +283,13 @@ func getSunriseSunset(s *state, sunrise bool, dateToUse *carbon.Carbon, offset .
 }
 
 func (app *App) Start() {
-	slog.Info("Starting", "schedules", app.schedules.len())
-	slog.Info("Starting", "entity listeners", len(app.entityListeners))
-	slog.Info("Starting", "event listeners", len(app.eventListeners))
+	slog.Info("Starting",
+		"version", Version,
+		"schedules", app.schedules.len(),
+		"intervals", app.intervals.len(),
+		"entity_listeners", len(app.entityListeners),
+		"event_listeners", len(app.eventListeners),
+	)
 
 	go runSchedules(app)
 	go runIntervals(app)
