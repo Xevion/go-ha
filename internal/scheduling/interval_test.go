@@ -60,7 +60,7 @@ func TestIntervalTrigger_NextTime(t *testing.T) {
 		trigger, _ := NewIntervalTrigger(time.Hour)
 		// Epoch is on an hour boundary relative to the Unix epoch, so it's not modified by WithEpoch.
 		epoch := time.Date(2024, 7, 25, 0, 0, 0, 0, time.UTC)
-		trigger.WithEpoch(epoch)
+		trigger = trigger.WithEpoch(epoch)
 		next := trigger.NextTime(now)
 		expected := time.Date(2024, 7, 25, 13, 0, 0, 0, time.UTC)
 		assert.Equal(t, expected, *next)
@@ -69,7 +69,7 @@ func TestIntervalTrigger_NextTime(t *testing.T) {
 	t.Run("multiple intervals", func(t *testing.T) {
 		trigger, _ := NewIntervalTrigger(time.Hour, 30*time.Minute) // total 1.5h
 		epoch := time.Date(2024, 7, 25, 0, 0, 0, 0, time.UTC)
-		trigger.WithEpoch(epoch)
+		trigger = trigger.WithEpoch(epoch)
 		// now = 12:00. epoch = 00:00. duration = 12h.
 		// cycles = 12h / 1.5h = 8.
 		// currentCycleStart = 00:00 + 8 * 1.5h = 12:00.
@@ -91,7 +91,7 @@ func TestIntervalTrigger_NextTime(t *testing.T) {
 	t.Run("now before epoch", func(t *testing.T) {
 		trigger, _ := NewIntervalTrigger(time.Hour)
 		epoch := time.Date(2024, 7, 26, 0, 0, 0, 0, time.UTC)
-		trigger.WithEpoch(epoch)
+		trigger = trigger.WithEpoch(epoch)
 		next := trigger.NextTime(now)
 		expected := time.Date(2024, 7, 26, 1, 0, 0, 0, time.UTC)
 		assert.Equal(t, expected, *next)
@@ -100,7 +100,7 @@ func TestIntervalTrigger_NextTime(t *testing.T) {
 	t.Run("now is exactly on a trigger time", func(t *testing.T) {
 		trigger, _ := NewIntervalTrigger(time.Hour)
 		epoch := time.Date(2024, 7, 25, 0, 0, 0, 0, time.UTC)
-		trigger.WithEpoch(epoch)
+		trigger = trigger.WithEpoch(epoch)
 		nowOnTrigger := time.Date(2024, 7, 25, 12, 0, 0, 0, time.UTC)
 		// The next trigger should be the following one.
 		next := trigger.NextTime(nowOnTrigger)
@@ -119,7 +119,7 @@ func TestIntervalTrigger_NextTimeAcrossDSTFallBack(t *testing.T) {
 	epoch := time.Date(2025, 11, 2, 1, 0, 0, 0, chicago)
 	trigger, err := NewIntervalTrigger(30 * time.Minute)
 	require.NoError(t, err)
-	trigger.WithEpoch(epoch)
+	trigger = trigger.WithEpoch(epoch)
 
 	cursor := time.Date(2025, 11, 2, 0, 30, 0, 0, chicago)
 	got := make([]time.Time, 0, 5)
@@ -168,10 +168,10 @@ func TestIntervalTrigger_Hash(t *testing.T) {
 
 	t.Run("hash changes with epoch", func(t *testing.T) {
 		trigger1, _ := NewIntervalTrigger(time.Hour)
-		trigger1.WithEpoch(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC))
+		trigger1 = trigger1.WithEpoch(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC))
 
 		trigger2, _ := NewIntervalTrigger(time.Hour)
-		trigger2.WithEpoch(time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC))
+		trigger2 = trigger2.WithEpoch(time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC))
 
 		assert.NotEqual(t, trigger1.Hash(), trigger2.Hash())
 	})

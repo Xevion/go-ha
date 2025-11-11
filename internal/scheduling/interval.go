@@ -39,10 +39,13 @@ func NewIntervalTrigger(interval time.Duration, additional ...time.Duration) (*I
 	}, nil
 }
 
-// WithEpoch sets the epoch time for the IntervalTrigger. The epoch is the reference point for all interval calculations.
+// WithEpoch returns a copy of the trigger anchored to epoch, the reference point
+// for all interval calculations. It copies rather than mutates so that two
+// automations built from one builder chain cannot end up sharing an epoch.
 func (t *IntervalTrigger) WithEpoch(epoch time.Time) *IntervalTrigger {
-	t.epoch = epoch
-	return t
+	anchored := *t
+	anchored.epoch = epoch
+	return &anchored
 }
 
 // NextTime calculates the next occurrence of this interval trigger after the given time.

@@ -99,7 +99,9 @@ func (ib intervalBuilderCall) Every(s types.DurationString) intervalBuilderEnd {
 func (ib intervalBuilderEnd) StartingAt(s types.TimeString) intervalBuilderEnd {
 	ib.interval.startTime = s
 	if ib.interval.trigger != nil {
-		ib.interval.trigger.WithEpoch(internal.ParseTime(internal.RealClock{}, string(s)).StdTime())
+		ib.interval.trigger = ib.interval.trigger.WithEpoch(
+			internal.ParseTime(internal.RealClock{}, string(s)).StdTime(),
+		)
 	}
 	return ib
 }
