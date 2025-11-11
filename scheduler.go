@@ -53,8 +53,14 @@ func (s *scheduler) push(entry *scheduledEntry) {
 	})
 }
 
-// pop removes and returns the entry due soonest, blocking until one exists.
+// pop removes and returns the entry due soonest, or nil when nothing is queued.
 func (s *scheduler) pop() *scheduledEntry {
+	// Get blocks until something is queued, and nothing else ever will be once
+	// the run loop owns the scheduler, so it must never be called unguarded.
+	if s.queue.Empty() {
+		return nil
+	}
+
 	items, err := s.queue.Get(1)
 	if err != nil || len(items) == 0 {
 		return nil
@@ -76,13 +82,14 @@ func (s *scheduler) requeue(entry *scheduledEntry) bool {
 	return true
 }
 
-// peek returns the entry due soonest without removing it.
+// peek returns the entry due soonest without removing it, or nil when nothing
+// is queued.
 func (s *scheduler) peek() *scheduledEntry {
-	entry := s.pop()
-	if entry != nil {
-		s.push(entry)
+	item := s.queue.Peek()
+	if item == nil {
+		return nil
 	}
-	return entry
+	return item.(Item).Value.(*scheduledEntry)
 }
 
 // runDue fires every entry due at or before now, requeueing each, and reports

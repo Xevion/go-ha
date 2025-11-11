@@ -177,6 +177,64 @@ func TestSchedulerPeekLeavesTheEntryQueued(t *testing.T) {
 	assert.Equal(t, 1, s.len())
 }
 
+// oneShotTrigger fires once and then reports no further occurrence, which is
+// what a sun trigger does when it runs into a polar night.
+type oneShotTrigger struct {
+	at    time.Time
+	spent bool
+}
+
+func (t *oneShotTrigger) NextTime(time.Time) *time.Time {
+	if t.spent {
+		return nil
+	}
+	t.spent = true
+	return &t.at
+}
+
+func (t *oneShotTrigger) Hash() uint64 { return 1 }
+
+func TestSchedulerDoesNotBlockOnAnEmptyQueue(t *testing.T) {
+	s := newScheduler(internal.NewFakeClock(schedulerBase))
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		assert.Nil(t, s.pop())
+		assert.Nil(t, s.peek())
+		assert.Zero(t, s.runDue(schedulerBase))
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("pop, peek or runDue blocked on an empty queue")
+	}
+}
+
+func TestSchedulerRunDueSurvivesAnExhaustedTrigger(t *testing.T) {
+	clock := internal.NewFakeClock(schedulerBase)
+	s := newScheduler(clock)
+
+	fired := 0
+	require.True(t, s.add(&oneShotTrigger{at: schedulerBase.Add(time.Hour)}, func() { fired++ }))
+
+	clock.Advance(2 * time.Hour)
+
+	type result struct{ ran int }
+	done := make(chan result, 1)
+	go func() { done <- result{ran: s.runDue(clock.Now())} }()
+
+	select {
+	case got := <-done:
+		assert.Equal(t, 1, got.ran)
+		assert.Equal(t, 1, fired)
+		assert.Zero(t, s.len(), "the exhausted trigger must leave the queue empty")
+	case <-time.After(5 * time.Second):
+		t.Fatal("runDue blocked after an exhausted trigger emptied the queue")
+	}
+}
+
 func TestSchedulerOrdersMixedTriggerKinds(t *testing.T) {
 	s := newScheduler(internal.NewFakeClock(schedulerBase))
 	nyc := scheduling.Location{Latitude: 40.7128, Longitude: -74.0060}
