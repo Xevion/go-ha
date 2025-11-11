@@ -168,6 +168,6 @@ func callEventListeners(app *App, msg connect.ChannelMessage) {
 			RawEventJSON: msg.Raw,
 		}
 		go l.callback(app.service, app.state, eventData)
-		l.lastRan = carbon.Now()
+		l.lastRan = app.clock.Carbon()
 	}
 }

@@ -247,13 +247,13 @@ func callEntityListeners(app *App, msgBytes []byte) {
 			l := l
 			l.delayTimer = time.AfterFunc(l.delay, func() {
 				go l.callback(app.service, app.state, entityData)
-				l.lastRan = carbon.Now()
+				l.lastRan = app.clock.Carbon()
 			})
 			continue
 		}
 
 		// run now if no delay set
 		go l.callback(app.service, app.state, entityData)
-		l.lastRan = carbon.Now()
+		l.lastRan = app.clock.Carbon()
 	}
 }
