@@ -6,11 +6,11 @@ toolchain go1.26.0
 
 require (
 	github.com/Workiva/go-datastructures v1.1.5
-	github.com/dromara/carbon/v2 v2.6.11
+	github.com/dromara/carbon/v2 v2.6.16
 	github.com/gorilla/websocket v1.5.3
 	github.com/nathan-osman/go-sunrise v1.1.0
 	github.com/robfig/cron/v3 v3.0.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
 	resty.dev/v3 v3.0.0-beta.3
 )
