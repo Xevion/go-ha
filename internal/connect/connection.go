@@ -3,7 +3,6 @@ package connect
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -13,8 +12,6 @@ import (
 	"github.com/Xevion/go-ha/internal"
 	"github.com/gorilla/websocket"
 )
-
-var ErrInvalidToken = errors.New("invalid authentication token")
 
 // HAConnection is a wrapper around a WebSocket connection that provides a mutex for thread safety.
 type HAConnection struct {
@@ -136,7 +133,7 @@ func VerifyAuthResponse(conn *websocket.Conn, ctx context.Context) error {
 	}
 
 	if msg.MsgType != "auth_ok" {
-		return ErrInvalidToken
+		return ErrAuthFailed
 	}
 
 	return nil
