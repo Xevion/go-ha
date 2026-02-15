@@ -3,11 +3,34 @@ package internal
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
 	"net/url"
 	"time"
 
 	"resty.dev/v3"
 )
+
+var (
+	// ErrUnauthorized reports a token Home Assistant refused.
+	ErrUnauthorized = errors.New("unauthorized")
+	// ErrEntityNotFound reports an entity Home Assistant does not know about.
+	ErrEntityNotFound = errors.New("entity not found")
+	// ErrHttpStatus reports any other non-success response.
+	ErrHttpStatus = errors.New("unexpected http status")
+)
+
+// statusError maps a response status onto a sentinel, so callers can match with
+// errors.Is instead of matching on the message text.
+func statusError(resp *resty.Response) error {
+	switch resp.StatusCode() {
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return ErrUnauthorized
+	case http.StatusNotFound:
+		return ErrEntityNotFound
+	}
+	return fmt.Errorf("%w %s", ErrHttpStatus, resp.Status())
+}
 
 type HttpClient struct {
 	client      *resty.Client
@@ -50,11 +73,11 @@ func (c *HttpClient) GetState(entityId string) ([]byte, error) {
 	resp, err := c.getRequest().Get("/states/" + entityId)
 
 	if err != nil {
-		return nil, errors.New("Error making HTTP request: " + err.Error())
+		return nil, fmt.Errorf("requesting state of %q: %w", entityId, err)
 	}
 
 	if resp.StatusCode() >= 400 {
-		return nil, errors.New("HTTP error: " + resp.Status() + " - " + string(resp.Bytes()))
+		return nil, fmt.Errorf("requesting state of %q: %w: %s", entityId, statusError(resp), resp.Bytes())
 	}
 
 	return resp.Bytes(), nil
@@ -65,11 +88,11 @@ func (c *HttpClient) GetStates() ([]byte, error) {
 	resp, err := c.getRequest().Get("/states")
 
 	if err != nil {
-		return nil, errors.New("Error making HTTP request: " + err.Error())
+		return nil, fmt.Errorf("requesting all states: %w", err)
 	}
 
 	if resp.StatusCode() >= 400 {
-		return nil, errors.New("HTTP error: " + resp.Status() + " - " + string(resp.Bytes()))
+		return nil, fmt.Errorf("requesting all states: %w: %s", statusError(resp), resp.Bytes())
 	}
 
 	return resp.Bytes(), nil
