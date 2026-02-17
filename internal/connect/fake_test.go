@@ -45,6 +45,20 @@ func (h *fakeHA) allowDials() {
 	h.dialErr = nil
 }
 
+// rotateToken changes the token the server accepts, standing in for a
+// long-lived token revoked while an app was running.
+func (h *fakeHA) rotateToken(token string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.token = token
+}
+
+func (h *fakeHA) acceptedToken() string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.token
+}
+
 func (h *fakeHA) dialCount() int {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -100,7 +114,7 @@ func (h *fakeHA) serve(conn *fakeConn) {
 		conn.serverClose()
 		return
 	}
-	if auth.AccessToken != h.token {
+	if auth.AccessToken != h.acceptedToken() {
 		conn.push(`{"type":"auth_invalid","message":"Invalid access token"}`)
 		conn.serverClose()
 		return
