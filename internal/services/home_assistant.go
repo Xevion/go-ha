@@ -5,7 +5,7 @@ import (
 )
 
 type HomeAssistant struct {
-	conn *connect.HAConnection
+	conn *connect.Client
 }
 
 // TurnOn a Home Assistant entity. Takes an entityId and an optional map that is translated into service_data.
@@ -17,7 +17,7 @@ func (ha *HomeAssistant) TurnOn(entityId string, serviceData ...map[string]any) 
 		req.ServiceData = serviceData[0]
 	}
 
-	return ha.conn.WriteMessage(req)
+	return ha.conn.Send(&req)
 }
 
 // Toggle a Home Assistant entity. Takes an entityId and an optional map that is translated into service_data.
@@ -29,7 +29,7 @@ func (ha *HomeAssistant) Toggle(entityId string, serviceData ...map[string]any) 
 		req.ServiceData = serviceData[0]
 	}
 
-	return ha.conn.WriteMessage(req)
+	return ha.conn.Send(&req)
 }
 
 // TurnOff turns off a Home Assistant entity.
@@ -38,5 +38,5 @@ func (ha *HomeAssistant) TurnOff(entityId string) error {
 	req.Domain = "homeassistant"
 	req.Service = "turn_off"
 
-	return ha.conn.WriteMessage(req)
+	return ha.conn.Send(&req)
 }

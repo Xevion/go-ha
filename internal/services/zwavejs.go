@@ -5,7 +5,7 @@ import (
 )
 
 type ZWaveJS struct {
-	conn *connect.HAConnection
+	conn *connect.Client
 }
 
 // ZWaveJS bulk_set_partial_config_parameters service.
@@ -18,5 +18,5 @@ func (zw ZWaveJS) BulkSetPartialConfigParam(entityId string, parameter int, valu
 		"value":     value,
 	}
 
-	return zw.conn.WriteMessage(req)
+	return zw.conn.Send(&req)
 }

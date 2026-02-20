@@ -5,7 +5,7 @@ import (
 )
 
 type Number struct {
-	conn *connect.HAConnection
+	conn *connect.Client
 }
 
 func (ib Number) SetValue(entityId string, value float32) error {
@@ -14,7 +14,7 @@ func (ib Number) SetValue(entityId string, value float32) error {
 	req.Service = "set_value"
 	req.ServiceData = map[string]any{"value": value}
 
-	return ib.conn.WriteMessage(req)
+	return ib.conn.Send(&req)
 }
 
 func (ib Number) MustSetValue(entityId string, value float32) {

@@ -11,7 +11,6 @@ import (
 
 	"github.com/Workiva/go-datastructures/queue"
 	"github.com/dromara/carbon/v2"
-	"github.com/gorilla/websocket"
 	sunriseLib "github.com/nathan-osman/go-sunrise"
 
 	"github.com/Xevion/go-ha/internal"
@@ -26,8 +25,8 @@ type App struct {
 	ctx       context.Context
 	ctxCancel context.CancelFunc
 
-	// Wraps the ws connection with added mutex locking
-	conn *connect.HAConnection
+	// Owns the websocket connection, and re-establishes it when it drops.
+	client *connect.Client
 
 	httpClient *internal.HttpClient
 	clock      internal.Clock
@@ -35,11 +34,10 @@ type App struct {
 	service *Service
 	state   *state
 
-	schedules         *scheduler
-	intervals         *scheduler
-	entityListeners   map[string][]*EntityListener
-	entityListenersId int64
-	eventListeners    map[string][]*EventListener
+	schedules       *scheduler
+	intervals       *scheduler
+	entityListeners map[string][]*EntityListener
+	eventListeners  map[string][]*EventListener
 }
 
 type Item types.Item
@@ -99,27 +97,36 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 		}
 	}
 
-	conn, ctx, ctxCancel, err := connect.ConnectionFromUri(baseURL, request.HAAuthToken)
+	ctx, ctxCancel := context.WithCancel(context.Background())
+
+	client, err := connect.NewClient(baseURL, request.HAAuthToken, connect.Options{})
 	if err != nil {
+		ctxCancel()
+		return nil, err
+	}
+	if err := client.Connect(ctx); err != nil {
+		ctxCancel()
 		return nil, err
 	}
 
 	httpClient := internal.NewHttpClient(ctx, baseURL, request.HAAuthToken)
 
 	clock := internal.RealClock{}
-	service := newService(conn)
+	service := newService(client)
 	state, err := newState(httpClient, request.HomeZoneEntityId)
 	if err != nil {
+		ctxCancel()
 		return nil, err
 	}
 
 	// Validate home zone
 	if err := validateHomeZone(state, request.HomeZoneEntityId); err != nil {
+		ctxCancel()
 		return nil, err
 	}
 
 	return &App{
-		conn:            conn,
+		client:          client,
 		ctx:             ctx,
 		ctxCancel:       ctxCancel,
 		httpClient:      httpClient,
@@ -133,43 +140,28 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 	}, nil
 }
 
+// Cleanup shuts the application down.
+//
+// Deprecated: use Close, which reports whether shutdown succeeded.
 func (app *App) Cleanup() {
-	if app.ctxCancel != nil {
-		app.ctxCancel()
-	}
+	_ = app.Close()
 }
 
-// Close performs a clean shutdown of the application. It cancels the context, closes the WebSocket connection, and ensures all background processes are properly terminated.
+// Close performs a clean shutdown: it stops the background goroutines, closes
+// the connection, and waits for both to finish.
 func (app *App) Close() error {
-	// Close WebSocket connection if it exists
-	if app.conn != nil {
-		deadline := time.Now().Add(10 * time.Second)
-		err := app.conn.Conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), deadline)
-		if err != nil {
-			slog.Warn("Error writing close message", "error", err)
-			return err
-		}
-
-		// Close the WebSocket connection
-		err = app.conn.Conn.Close()
-		if err != nil {
-			slog.Warn("Error closing WebSocket connection", "error", err)
-			return err
-		}
-	}
-
-	// Wait a short time for the WebSocket connection to close
-	time.Sleep(500 * time.Millisecond)
-
-	// Cancel context to signal all goroutines to stop
 	if app.ctxCancel != nil {
 		app.ctxCancel()
 	}
 
-	// Wait a short time for goroutines to finish
-	// This allows for graceful shutdown of background processes
-	time.Sleep(100 * time.Millisecond)
-
+	if app.client == nil {
+		return nil
+	}
+	// Close waits for the client's goroutines, so shutdown no longer guesses at
+	// how long they need with a pair of sleeps.
+	if err := app.client.Close(); err != nil {
+		return fmt.Errorf("closing connection: %w", err)
+	}
 	return nil
 }
 
@@ -241,9 +233,15 @@ func (app *App) RegisterEventListeners(evls ...EventListener) {
 		for _, eventType := range evl.eventTypes {
 			if elList, ok := app.eventListeners[eventType]; ok {
 				app.eventListeners[eventType] = append(elList, &evl)
-			} else {
-				connect.SubscribeToEventType(eventType, app.conn, app.ctx)
-				app.eventListeners[eventType] = []*EventListener{&evl}
+				continue
+			}
+
+			app.eventListeners[eventType] = []*EventListener{&evl}
+			if err := app.client.Subscribe(
+				connect.Subscription{EventType: eventType},
+				func(msg connect.Message) { callEventListeners(app, msg) },
+			); err != nil {
+				slog.Error("Failed to subscribe to event type", "event_type", eventType, "error", err)
 			}
 		}
 	}
@@ -294,10 +292,12 @@ func (app *App) Start() {
 	go runSchedules(app)
 	go runIntervals(app)
 
-	// subscribe to state_changed events
-	id := internal.NextId()
-	connect.SubscribeToStateChangedEvents(id, app.conn, app.ctx)
-	app.entityListenersId = id
+	if err := app.client.Subscribe(
+		connect.Subscription{EventType: "state_changed"},
+		func(msg connect.Message) { callEntityListeners(app, msg.Raw) },
+	); err != nil {
+		slog.Error("Failed to subscribe to state changes", "error", err)
+	}
 
 	// Run entity listeners startup
 	for eid, etls := range app.entityListeners {
@@ -323,27 +323,11 @@ func (app *App) Start() {
 		}
 	}
 
-	// entity listeners and event listeners
-	elChan := make(chan connect.ChannelMessage, 100) // Add buffer to prevent channel overflow
-	go connect.ListenWebsocket(app.conn.Conn, elChan)
-
-	for {
-		select {
-		case msg, ok := <-elChan:
-			if !ok {
-				slog.Info("WebSocket channel closed, stopping main loop")
-				return
-			}
-			if app.entityListenersId == msg.Id {
-				go callEntityListeners(app, msg.Raw)
-			} else {
-				go callEventListeners(app, msg)
-			}
-		case <-app.ctx.Done():
-			slog.Info("Context cancelled, stopping main loop")
-			return
-		}
-	}
+	// Dispatch belongs to the client now: it routes each message to the
+	// subscription that asked for it, so there is nothing left to demultiplex
+	// here and no id to compare against.
+	<-app.ctx.Done()
+	slog.Info("Context cancelled, stopping")
 }
 
 func (app *App) Services() *Service {

@@ -5,7 +5,7 @@ import (
 )
 
 type Scene struct {
-	conn *connect.HAConnection
+	conn *connect.Client
 }
 
 // Apply a scene. Takes map that is translated into service_data.
@@ -17,7 +17,7 @@ func (s Scene) Apply(serviceData ...map[string]any) error {
 		req.ServiceData = serviceData[0]
 	}
 
-	return s.conn.WriteMessage(req)
+	return s.conn.Send(&req)
 }
 
 // Create a scene entity. Takes an entityId and an optional map that is translated into service_data.
@@ -29,7 +29,7 @@ func (s Scene) Create(entityId string, serviceData ...map[string]any) error {
 		req.ServiceData = serviceData[0]
 	}
 
-	return s.conn.WriteMessage(req)
+	return s.conn.Send(&req)
 }
 
 // Reload the scenes.
@@ -38,7 +38,7 @@ func (s Scene) Reload() error {
 	req.Domain = "scene"
 	req.Service = "reload"
 
-	return s.conn.WriteMessage(req)
+	return s.conn.Send(&req)
 }
 
 // TurnOn a scene entity. Takes an entityId and an optional map that is translated into service_data.
@@ -50,5 +50,5 @@ func (s Scene) TurnOn(entityId string, serviceData ...map[string]any) error {
 		req.ServiceData = serviceData[0]
 	}
 
-	return s.conn.WriteMessage(req)
+	return s.conn.Send(&req)
 }

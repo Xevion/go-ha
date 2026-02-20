@@ -5,7 +5,7 @@ import (
 )
 
 type AlarmControlPanel struct {
-	conn *connect.HAConnection
+	conn *connect.Client
 }
 
 // Send the alarm the command for arm away. Takes an entityId and an optional map that is translated into service_data.
@@ -17,7 +17,7 @@ func (acp AlarmControlPanel) ArmAway(entityId string, serviceData ...map[string]
 		req.ServiceData = serviceData[0]
 	}
 
-	return acp.conn.WriteMessage(req)
+	return acp.conn.Send(&req)
 }
 
 // Send the alarm the command for arm away. Takes an entityId and an optional map that is translated into service_data.
@@ -29,7 +29,7 @@ func (acp AlarmControlPanel) ArmWithCustomBypass(entityId string, serviceData ..
 		req.ServiceData = serviceData[0]
 	}
 
-	return acp.conn.WriteMessage(req)
+	return acp.conn.Send(&req)
 }
 
 // Send the alarm the command for arm home. Takes an entityId and an optional map that is translated into service_data.
@@ -41,7 +41,7 @@ func (acp AlarmControlPanel) ArmHome(entityId string, serviceData ...map[string]
 		req.ServiceData = serviceData[0]
 	}
 
-	return acp.conn.WriteMessage(req)
+	return acp.conn.Send(&req)
 }
 
 // Send the alarm the command for arm night. Takes an entityId and an optional map that is translated into service_data.
@@ -53,7 +53,7 @@ func (acp AlarmControlPanel) ArmNight(entityId string, serviceData ...map[string
 		req.ServiceData = serviceData[0]
 	}
 
-	return acp.conn.WriteMessage(req)
+	return acp.conn.Send(&req)
 }
 
 // Send the alarm the command for arm vacation. Takes an entityId and an optional map that is translated into service_data.
@@ -65,7 +65,7 @@ func (acp AlarmControlPanel) ArmVacation(entityId string, serviceData ...map[str
 		req.ServiceData = serviceData[0]
 	}
 
-	return acp.conn.WriteMessage(req)
+	return acp.conn.Send(&req)
 }
 
 // Send the alarm the command for disarm. Takes an entityId and an optional map that is translated into service_data.
@@ -77,7 +77,7 @@ func (acp AlarmControlPanel) Disarm(entityId string, serviceData ...map[string]a
 		req.ServiceData = serviceData[0]
 	}
 
-	return acp.conn.WriteMessage(req)
+	return acp.conn.Send(&req)
 }
 
 // Send the alarm the command for trigger. Takes an entityId and an optional map that is translated into service_data.
@@ -89,5 +89,5 @@ func (acp AlarmControlPanel) Trigger(entityId string, serviceData ...map[string]
 		req.ServiceData = serviceData[0]
 	}
 
-	return acp.conn.WriteMessage(req)
+	return acp.conn.Send(&req)
 }

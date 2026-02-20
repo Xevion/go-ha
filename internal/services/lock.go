@@ -5,7 +5,7 @@ import (
 )
 
 type Lock struct {
-	conn *connect.HAConnection
+	conn *connect.Client
 }
 
 // Lock a lock entity. Takes an entityId and an optional map that is translated into service_data.
@@ -17,7 +17,7 @@ func (l Lock) Lock(entityId string, serviceData ...map[string]any) error {
 		req.ServiceData = serviceData[0]
 	}
 
-	return l.conn.WriteMessage(req)
+	return l.conn.Send(&req)
 }
 
 // Unlock a lock entity. Takes an entityId and an optional map that is translated into service_data.
@@ -29,5 +29,5 @@ func (l Lock) Unlock(entityId string, serviceData ...map[string]any) error {
 		req.ServiceData = serviceData[0]
 	}
 
-	return l.conn.WriteMessage(req)
+	return l.conn.Send(&req)
 }

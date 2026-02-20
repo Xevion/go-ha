@@ -6,7 +6,7 @@ import (
 )
 
 type Notify struct {
-	conn *connect.HAConnection
+	conn *connect.Client
 }
 
 // Notify sends a notification. Takes a types.NotifyRequest.
@@ -23,5 +23,5 @@ func (ha *Notify) Notify(reqData types.NotifyRequest) error {
 	}
 
 	req.ServiceData = serviceData
-	return ha.conn.WriteMessage(req)
+	return ha.conn.Send(&req)
 }

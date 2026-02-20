@@ -5,7 +5,7 @@ import (
 )
 
 type AdaptiveLighting struct {
-	conn *connect.HAConnection
+	conn *connect.Client
 }
 
 // Set manual control for an adaptive lighting entity.
@@ -18,5 +18,5 @@ func (al AdaptiveLighting) SetManualControl(entityId string, enabled bool) error
 		"manual_control": enabled,
 	}
 
-	return al.conn.WriteMessage(req)
+	return al.conn.Send(&req)
 }

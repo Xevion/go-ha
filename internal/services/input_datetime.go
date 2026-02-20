@@ -8,7 +8,7 @@ import (
 )
 
 type InputDatetime struct {
-	conn *connect.HAConnection
+	conn *connect.Client
 }
 
 func (ib InputDatetime) Set(entityId string, value time.Time) error {
@@ -19,12 +19,12 @@ func (ib InputDatetime) Set(entityId string, value time.Time) error {
 		"timestamp": fmt.Sprint(value.Unix()),
 	}
 
-	return ib.conn.WriteMessage(req)
+	return ib.conn.Send(&req)
 }
 
 func (ib InputDatetime) Reload() error {
 	req := NewBaseServiceRequest("")
 	req.Domain = "input_datetime"
 	req.Service = "reload"
-	return ib.conn.WriteMessage(req)
+	return ib.conn.Send(&req)
 }

@@ -5,7 +5,7 @@ import (
 )
 
 type InputText struct {
-	conn *connect.HAConnection
+	conn *connect.Client
 }
 
 // Set sets the value of an input text entity.
@@ -17,12 +17,12 @@ func (ib InputText) Set(entityId string, value string) error {
 		"value": value,
 	}
 
-	return ib.conn.WriteMessage(req)
+	return ib.conn.Send(&req)
 }
 
 func (ib InputText) Reload() error {
 	req := NewBaseServiceRequest("")
 	req.Domain = "input_text"
 	req.Service = "reload"
-	return ib.conn.WriteMessage(req)
+	return ib.conn.Send(&req)
 }

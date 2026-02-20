@@ -6,7 +6,7 @@ import (
 )
 
 type Climate struct {
-	conn *connect.HAConnection
+	conn *connect.Client
 }
 
 func (c Climate) SetFanMode(entityId string, fanMode string) error {
@@ -15,7 +15,7 @@ func (c Climate) SetFanMode(entityId string, fanMode string) error {
 	req.Service = "set_fan_mode"
 	req.ServiceData = map[string]any{"fan_mode": fanMode}
 
-	return c.conn.WriteMessage(req)
+	return c.conn.Send(&req)
 }
 
 func (c Climate) SetTemperature(entityId string, serviceData types.SetTemperatureRequest) error {
@@ -24,5 +24,5 @@ func (c Climate) SetTemperature(entityId string, serviceData types.SetTemperatur
 	req.Service = "set_temperature"
 	req.ServiceData = serviceData.ToJSON()
 
-	return c.conn.WriteMessage(req)
+	return c.conn.Send(&req)
 }

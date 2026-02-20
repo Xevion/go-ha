@@ -5,7 +5,7 @@ import (
 )
 
 type InputButton struct {
-	conn *connect.HAConnection
+	conn *connect.Client
 }
 
 // Press presses an input button entity.
@@ -14,12 +14,12 @@ func (ib InputButton) Press(entityId string) error {
 	req.Domain = "input_button"
 	req.Service = "press"
 
-	return ib.conn.WriteMessage(req)
+	return ib.conn.Send(&req)
 }
 
 func (ib InputButton) Reload() error {
 	req := NewBaseServiceRequest("")
 	req.Domain = "input_button"
 	req.Service = "reload"
-	return ib.conn.WriteMessage(req)
+	return ib.conn.Send(&req)
 }

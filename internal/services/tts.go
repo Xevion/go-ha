@@ -5,7 +5,7 @@ import (
 )
 
 type TTS struct {
-	conn *connect.HAConnection
+	conn *connect.Client
 }
 
 // Remove all text-to-speech cache files and RAM cache.
@@ -14,7 +14,7 @@ func (tts TTS) ClearCache() error {
 	req.Domain = "tts"
 	req.Service = "clear_cache"
 
-	return tts.conn.WriteMessage(req)
+	return tts.conn.Send(&req)
 }
 
 // Say something using text-to-speech on a media player with cloud. Takes an entityId and an optional map that is translated into service_data.
@@ -26,7 +26,7 @@ func (tts TTS) CloudSay(entityId string, serviceData ...map[string]any) error {
 		req.ServiceData = serviceData[0]
 	}
 
-	return tts.conn.WriteMessage(req)
+	return tts.conn.Send(&req)
 }
 
 // Say something using text-to-speech on a media player with google_translate. Takes an entityId and an optional map that is translated into service_data.
@@ -38,5 +38,5 @@ func (tts TTS) GoogleTranslateSay(entityId string, serviceData ...map[string]any
 		req.ServiceData = serviceData[0]
 	}
 
-	return tts.conn.WriteMessage(req)
+	return tts.conn.Send(&req)
 }

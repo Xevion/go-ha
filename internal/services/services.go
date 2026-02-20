@@ -1,7 +1,6 @@
 package services
 
 import (
-	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/internal/connect"
 )
 
@@ -29,7 +28,7 @@ func BuildService[
 		Timer |
 		Vacuum |
 		ZWaveJS,
-](conn *connect.HAConnection) *T {
+](conn *connect.Client) *T {
 	return &T{conn: conn}
 }
 
@@ -44,10 +43,13 @@ type BaseServiceRequest struct {
 	} `json:"target,omitempty"`
 }
 
+// SetID stamps the request with a connection-scoped id. The client calls this
+// at send time, because an id is only meaningful on the connection that
+// carries it and a request may outlive the one it was built for.
+func (r *BaseServiceRequest) SetID(id int64) { r.Id = id }
+
 func NewBaseServiceRequest(entityId string) BaseServiceRequest {
-	id := internal.NextId()
 	request := BaseServiceRequest{
-		Id:          id,
 		RequestType: "call_service",
 	}
 
