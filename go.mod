@@ -6,8 +6,8 @@ toolchain go1.26.0
 
 require (
 	github.com/Workiva/go-datastructures v1.1.5
+	github.com/coder/websocket v1.8.14
 	github.com/dromara/carbon/v2 v2.6.16
-	github.com/gorilla/websocket v1.5.3
 	github.com/nathan-osman/go-sunrise v1.1.0
 	github.com/robfig/cron/v3 v3.0.0
 	github.com/stretchr/testify v1.11.1
@@ -16,7 +16,6 @@ require (
 )
 
 require (
-	github.com/coder/websocket v1.8.14 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

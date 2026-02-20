@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
-	"sync/atomic"
 )
 
 type EnabledDisabledInfo struct {
@@ -15,15 +14,6 @@ type EnabledDisabledInfo struct {
 
 // Version is the go-ha release this build corresponds to.
 const Version = "0.8.0"
-
-var (
-	id atomic.Int64 // default value is 0
-)
-
-// NextId returns a unique integer (for the given process), often used for providing a uniquely identifiable ID for a request. This function is thread-safe.
-func NextId() int64 {
-	return id.Add(1)
-}
 
 // GetFunctionName returns the name of the function that the interface is a pointer to.
 func GetFunctionName(i interface{}) string {
