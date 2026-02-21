@@ -99,7 +99,11 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
 
-	client, err := connect.NewClient(baseURL, request.HAAuthToken, connect.Options{})
+	client, err := connect.NewClient(baseURL, request.HAAuthToken, connect.Options{
+		QueueSize:    request.Connection.QueueSize,
+		Workers:      request.Connection.Workers,
+		PingInterval: request.Connection.PingInterval,
+	})
 	if err != nil {
 		ctxCancel()
 		return nil, err

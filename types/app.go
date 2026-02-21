@@ -32,4 +32,9 @@ type NewAppRequest struct {
 	// Setting this to `true` will use `https://` instead of `http://`
 	// and `wss://` instead of `ws://`.
 	Secure bool
+
+	// Optional
+	// Connection tunes the websocket connection. The zero value uses defaults
+	// suitable for a typical Home Assistant instance.
+	Connection ConnectionOptions
 }
