@@ -132,8 +132,22 @@ func TestClientStopsRetryingWhenTheTokenIsRefused(t *testing.T) {
 		// Retrying a refused token only produces the same answer more slowly,
 		// so the client gives up instead of reconnecting forever.
 		assert.Equal(t, 2, ha.dialCount(), "a refused token must not be retried")
-		assert.ErrorIs(t, c.ctx.Err(), context.Canceled, "the client must shut itself down")
+
+		select {
+		case <-c.Done():
+		default:
+			t.Fatal("giving up must be observable, or the app waits on a dead client forever")
+		}
 	})
+}
+
+func TestClientDoneBlocksBeforeConnecting(t *testing.T) {
+	c := newClientWithDialer(nil, testToken, Options{})
+	select {
+	case <-c.Done():
+		t.Fatal("a client that never connected has not finished")
+	default:
+	}
 }
 
 func TestClientPingTimeoutForcesReconnect(t *testing.T) {

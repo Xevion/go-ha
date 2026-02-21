@@ -330,8 +330,14 @@ func (app *App) Start() {
 	// Dispatch belongs to the client now: it routes each message to the
 	// subscription that asked for it, so there is nothing left to demultiplex
 	// here and no id to compare against.
-	<-app.ctx.Done()
-	slog.Info("Context cancelled, stopping")
+	select {
+	case <-app.ctx.Done():
+		slog.Info("Context cancelled, stopping")
+	case <-app.client.Done():
+		// The client gave up reconnecting, so blocking on our own context
+		// would leave the app alive but permanently deaf.
+		slog.Error("Connection abandoned, stopping")
+	}
 }
 
 func (app *App) Services() *Service {

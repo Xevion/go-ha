@@ -200,6 +200,22 @@ func (c *Client) Dropped() uint64 {
 	return c.dropped.Load()
 }
 
+// Done is closed once the client has stopped for good, whether because it was
+// closed or because reconnection was abandoned.
+//
+// Callers need this to notice the second case. Giving up cancels a context
+// derived from the caller's, which does not propagate upwards, so an app
+// waiting only on its own context would sit there indefinitely holding a
+// client that will never deliver another event.
+func (c *Client) Done() <-chan struct{} {
+	if c.ctx == nil {
+		// Never connected, so it can hardly be finished. A nil channel blocks
+		// forever, which is the correct answer for a select on "not yet".
+		return nil
+	}
+	return c.ctx.Done()
+}
+
 // connectOnce performs one dial and handshake.
 func (c *Client) connectOnce(ctx context.Context) (transport, error) {
 	dialCtx, cancel := context.WithTimeout(ctx, c.opts.DialTimeout)
