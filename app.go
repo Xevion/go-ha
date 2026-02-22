@@ -335,8 +335,11 @@ func (app *App) Start() {
 		slog.Info("Context cancelled, stopping")
 	case <-app.client.Done():
 		// The client gave up reconnecting, so blocking on our own context
-		// would leave the app alive but permanently deaf.
+		// would leave the app alive but permanently deaf. Cancelling also
+		// stops the schedule and interval goroutines, which would otherwise
+		// keep firing callbacks whose service calls have nowhere to go.
 		slog.Error("Connection abandoned, stopping")
+		app.ctxCancel()
 	}
 }
 
