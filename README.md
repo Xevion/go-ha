@@ -85,10 +85,13 @@ The general flow is
 3. Start app
 
 ```go
-import ha "github.com/Xevion/go-ha"
+import (
+ ha "github.com/Xevion/go-ha"
+ "github.com/Xevion/go-ha/types"
+)
 
 // replace with IP and port of your Home Assistant installation
-app, err := ga.NewApp(ga.NewAppRequest{
+app, err := ha.NewApp(types.NewAppRequest{
  URL:              "http://192.168.1.123:8123",
  HAAuthToken:      os.Getenv("HA_AUTH_TOKEN"),
  HomeZoneEntityId: "zone.home",
@@ -103,6 +106,47 @@ app.RegisterEventListeners(...)
 app.RegisterIntervals(...)
 
 app.Start()
+```
+
+### Connection handling
+
+The connection to Home Assistant looks after itself, and the behaviour is worth
+knowing because it decides what happens to your automations during an outage.
+
+**Reconnection.** A dropped connection is re-established automatically, with an
+exponential backoff that starts at one second, caps at a minute, and is
+jittered so a fleet of clients does not retry in lockstep. Every subscription
+is re-sent afterwards: Home Assistant replays nothing on its own, and the
+message ids from the old connection mean nothing on the new one.
+
+**Liveness.** While idle, go-ha sends the protocol's own `ping` every 30
+seconds. An unanswered ping drops the connection and triggers a reconnect. This
+catches a Home Assistant whose event loop has stopped responding while its HTTP
+server still accepts traffic, which a TCP-level check reports as perfectly
+healthy.
+
+**A refused token is fatal.** If Home Assistant rejects your token, go-ha stops
+rather than reconnecting forever, and `app.Start()` returns. Retrying a revoked
+token only produces the same answer more slowly.
+
+**Backpressure.** Incoming events cross a bounded queue to a pool of workers,
+and your callbacks run on those workers. If the queue fills, further events are
+dropped and counted. This is deliberate: Home Assistant disconnects a client
+that stops draining its socket for five seconds, so shedding a burst is
+survivable where stalling is not. If you see the warning, the fix is usually a
+callback that returns faster rather than a bigger queue.
+
+Both the queue size and the worker count are tunable:
+
+```go
+app, err := ha.NewApp(types.NewAppRequest{
+ URL:         "http://192.168.1.123:8123",
+ HAAuthToken: os.Getenv("HA_AUTH_TOKEN"),
+ Connection: types.ConnectionOptions{
+  QueueSize: 1024,
+  Workers:   8,
+ },
+})
 ```
 
 A full reference is available on [pkg.go.dev](https://pkg.go.dev/github.com/Xevion/go-ha), but all you need to know to get started are the four types of automations in go-ha.
