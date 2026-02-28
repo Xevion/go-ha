@@ -174,6 +174,42 @@ func TestClientPendingCallsFailOnDisconnect(t *testing.T) {
 	})
 }
 
+func TestClientSendsIdsInIncreasingOrder(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		const senders = 50
+
+		ha := newFakeHA(t, testToken)
+		c := connectedClient(t, ha, Options{PingInterval: time.Hour})
+		synctest.Wait()
+		conn := ha.current()
+
+		// Callbacks each run on their own goroutine, so concurrent service
+		// calls are the normal case rather than an edge case.
+		var wg sync.WaitGroup
+		for range senders {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				assert.NoError(t, c.Send(mapRequest{"type": "call_service"}))
+			}()
+		}
+		wg.Wait()
+		synctest.Wait()
+
+		seen := conn.requests()
+		require.Len(t, seen, senders)
+
+		// Home Assistant refuses any id that does not exceed the last one it
+		// received, answering ERR_ID_REUSE and never running the request. An id
+		// allocated atomically is not enough: it has to reach the socket in the
+		// order it was taken.
+		for i := 1; i < len(seen); i++ {
+			assert.Greater(t, seen[i].ID, seen[i-1].ID,
+				"request %d carried a smaller id than the one before it", i)
+		}
+	})
+}
+
 func TestClientSendReportsWriteFailure(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ha := newFakeHA(t, testToken)

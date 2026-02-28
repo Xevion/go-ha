@@ -98,6 +98,13 @@ type Client struct {
 	nextID  atomic.Int64
 	backoff *backoff
 
+	// writeMu serialises id allocation with the write that carries it. Home
+	// Assistant refuses any id that does not exceed the last it received, so
+	// the two steps cannot be allowed to interleave across goroutines.
+	//
+	// Lock ordering is always writeMu before mu, never the reverse.
+	writeMu sync.Mutex
+
 	mu      sync.Mutex
 	conn    transport
 	pending map[int64]func(Message)

@@ -11,31 +11,21 @@ import (
 // Home Assistant sends back is still correlated, but only to log a failure:
 // without it a call_service against a missing entity fails in total silence.
 func (c *Client) Send(req Request) error {
-	id := c.nextID.Add(1)
-	req.SetID(id)
-
-	c.watchResult(id)
-	if err := c.write(req); err != nil {
-		c.cancelPending(id)
-		return err
-	}
-	return nil
+	_, err := c.dispatch(req, nil)
+	return err
 }
 
 // Call writes a request and waits for Home Assistant to answer it.
 func (c *Client) Call(ctx context.Context, req Request) (Message, error) {
-	id := c.nextID.Add(1)
-	req.SetID(id)
-
 	// Buffered so delivery never blocks the reader, even if this caller has
 	// already given up and stopped waiting.
 	answer := make(chan Message, 1)
-	c.setPending(id, func(msg Message) { answer <- msg })
-	defer c.cancelPending(id)
 
-	if err := c.write(req); err != nil {
+	id, err := c.dispatch(req, func(msg Message) { answer <- msg })
+	if err != nil {
 		return Message{}, err
 	}
+	defer c.cancelPending(id)
 
 	select {
 	case msg := <-answer:
@@ -47,6 +37,43 @@ func (c *Client) Call(ctx context.Context, req Request) (Message, error) {
 	}
 }
 
+// dispatch allocates an id, registers the handler for its answer, and writes
+// the request.
+//
+// The whole sequence runs under writeMu because Home Assistant rejects any
+// message whose id is not greater than the last one it received. Allocating the
+// id atomically is not enough on its own: two goroutines could take 5 and 6 and
+// then reach the socket in the opposite order, at which point 5 is refused with
+// "Identifier values have to increase" and that caller never gets an answer.
+func (c *Client) dispatch(req Request, onAnswer func(Message)) (int64, error) {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+
+	id := c.nextID.Add(1)
+	req.SetID(id)
+
+	if onAnswer == nil {
+		onAnswer = logFailure
+	}
+
+	c.mu.Lock()
+	conn := c.conn
+	if conn != nil {
+		c.pending[id] = onAnswer
+	}
+	c.mu.Unlock()
+
+	if conn == nil {
+		return id, ErrNotConnected
+	}
+
+	if err := c.writeTo(conn, req); err != nil {
+		c.cancelPending(id)
+		return id, err
+	}
+	return id, nil
+}
+
 // Subscribe registers interest in an event stream. The subscription is retained
 // and re-established on every subsequent connection.
 func (c *Client) Subscribe(sub Subscription, handler Handler) error {
@@ -54,90 +81,72 @@ func (c *Client) Subscribe(sub Subscription, handler Handler) error {
 
 	c.mu.Lock()
 	c.subs = append(c.subs, s)
-	if c.conn == nil {
-		// Nothing to send yet; run replays it once a connection exists.
+	c.mu.Unlock()
+
+	// Establishing is a no-op while disconnected; run replays it once a
+	// connection exists.
+	return c.establish(s)
+}
+
+// establish sends the subscribe request for s on the current connection, and
+// routes the id it allocates to it.
+//
+// It holds writeMu for the whole operation, which is what makes the generation
+// check meaningful: without it, Subscribe and a replay could both decide a
+// subscription still needed establishing and leave two streams running for the
+// life of the connection.
+func (c *Client) establish(s *subscription) error {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+
+	c.mu.Lock()
+	conn := c.conn
+	if conn == nil || s.gen == c.gen {
 		c.mu.Unlock()
 		return nil
 	}
-	req := c.establishLocked(s)
-	c.mu.Unlock()
 
-	return c.sendEstablished(req)
-}
-
-// establishLocked allocates an id for a subscription on the current connection
-// and routes that id to it. The caller must hold c.mu.
-func (c *Client) establishLocked(s *subscription) mapRequest {
 	id := c.nextID.Add(1)
 	c.routes[id] = s
 	s.gen = c.gen
+	c.pending[id] = logFailure
+	c.mu.Unlock()
 
 	req := s.sub.request()
 	req.SetID(id)
-	return req
+
+	if err := c.writeTo(conn, req); err != nil {
+		c.mu.Lock()
+		delete(c.pending, id)
+		delete(c.routes, id)
+		// Leave gen behind so the next replay retries this subscription.
+		s.gen = 0
+		c.mu.Unlock()
+		return err
+	}
+	return nil
 }
 
 // resubscribe replays every subscription not yet established on the current
 // connection. Ids are connection-scoped, so each replay allocates a fresh one.
 func (c *Client) resubscribe() {
 	c.mu.Lock()
-	if c.conn == nil {
-		c.mu.Unlock()
-		return
-	}
-
-	var reqs []mapRequest
-	for _, s := range c.subs {
-		// A subscription added by Subscribe between the reconnect and now has
-		// already been established for this generation; sending again would
-		// leave a duplicate stream running for the life of the connection.
-		if s.gen == c.gen {
-			continue
-		}
-		reqs = append(reqs, c.establishLocked(s))
-	}
+	subs := append([]*subscription(nil), c.subs...)
 	c.mu.Unlock()
 
-	if len(reqs) == 0 {
-		return
-	}
-	slog.Info("Replaying subscriptions", "count", len(reqs))
-
-	for _, req := range reqs {
-		if err := c.sendEstablished(req); err != nil {
+	for _, s := range subs {
+		if err := c.establish(s); err != nil {
 			slog.Error("Failed to replay a subscription", "err", err)
 		}
 	}
 }
 
-// sendEstablished writes a request whose id was assigned in advance.
-func (c *Client) sendEstablished(req mapRequest) error {
-	id, ok := req["id"].(int64)
-	if !ok {
-		return fmt.Errorf("request has no id assigned")
+// logFailure is the answer handler for requests whose outcome is only worth
+// reporting, rather than waiting on.
+func logFailure(msg Message) {
+	if err := msg.err(); err != nil {
+		slog.Error("Home Assistant rejected a request", "id", msg.ID, "err", err)
 	}
-
-	c.watchResult(id)
-	if err := c.write(req); err != nil {
-		c.cancelPending(id)
-		return err
-	}
-	return nil
-}
-
-// watchResult records a request whose outcome is only worth logging.
-func (c *Client) watchResult(id int64) {
-	c.setPending(id, func(msg Message) {
-		if err := msg.err(); err != nil {
-			slog.Error("Home Assistant rejected a request", "id", msg.ID, "err", err)
-		}
-	})
-}
-
-func (c *Client) setPending(id int64, fn func(Message)) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.pending[id] = fn
 }
 
 func (c *Client) cancelPending(id int64) {
@@ -146,24 +155,17 @@ func (c *Client) cancelPending(id int64) {
 	delete(c.pending, id)
 }
 
-// write encodes and sends a message on the current connection.
-func (c *Client) write(v any) error {
+// writeTo encodes and sends a message on the given connection. Callers hold
+// writeMu, which keeps ids reaching the socket in the order they were taken.
+func (c *Client) writeTo(conn transport, v any) error {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("encoding request: %w", err)
 	}
 
-	c.mu.Lock()
-	conn := c.conn
-	c.mu.Unlock()
-
-	if conn == nil {
-		return ErrNotConnected
-	}
 	if c.ctx == nil {
 		return ErrNotConnected
 	}
-
 	ctx, cancel := context.WithTimeout(c.ctx, c.opts.WriteTimeout)
 	defer cancel()
 
