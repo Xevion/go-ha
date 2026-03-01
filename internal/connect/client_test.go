@@ -2,7 +2,9 @@ package connect
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -171,6 +173,59 @@ func TestClientPendingCallsFailOnDisconnect(t *testing.T) {
 		// The id was only meaningful on the connection that just died, so the
 		// caller has to be released rather than left waiting forever.
 		assert.Error(t, callErr)
+	})
+}
+
+func TestClientCallDeliversEachAnswerToItsOwnCaller(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		const callers = 25
+
+		ha := newFakeHA(t, testToken)
+		c := connectedClient(t, ha, Options{PingInterval: time.Hour})
+		synctest.Wait()
+
+		var (
+			wg         sync.WaitGroup
+			mu         sync.Mutex
+			mismatched []string
+		)
+		for i := range callers {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				marker := strconv.Itoa(i)
+				msg, err := c.Call(context.Background(), mapRequest{
+					"type":   "call_service",
+					"marker": marker,
+				})
+				if err != nil {
+					mu.Lock()
+					mismatched = append(mismatched, "call "+marker+" failed: "+err.Error())
+					mu.Unlock()
+					return
+				}
+
+				var body struct {
+					Result struct {
+						Marker string `json:"marker"`
+					} `json:"result"`
+				}
+				require.NoError(t, json.Unmarshal(msg.Raw, &body))
+
+				if body.Result.Marker != marker {
+					mu.Lock()
+					mismatched = append(mismatched, "call "+marker+" got "+body.Result.Marker)
+					mu.Unlock()
+				}
+			}()
+		}
+		wg.Wait()
+
+		// Asserting on the id alone would not catch this: a correlation that
+		// handed each waiter an arbitrary pending answer still returns a
+		// well-formed result to everybody.
+		assert.Empty(t, mismatched, "every caller must receive the answer to its own request")
 	})
 }
 

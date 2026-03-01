@@ -8,6 +8,7 @@ import (
 	"io"
 	"sync"
 	"testing"
+	"time"
 )
 
 // fakeHA is an in-memory Home Assistant speaking the websocket protocol over
@@ -18,11 +19,31 @@ type fakeHA struct {
 	t     *testing.T
 	token string
 
-	mu       sync.Mutex
-	conns    []*fakeConn
-	dials    int
-	dialErr  error
-	refuseAt int // dial attempt number from which dialErr applies, 1-based
+	mu        sync.Mutex
+	conns     []*fakeConn
+	dials     int
+	dialTimes []time.Time
+	dialErr   error
+	refuseAt  int // dial attempt number from which dialErr applies, 1-based
+}
+
+// dialTimeAt returns when the nth dial attempt was made, counting from zero.
+func (h *fakeHA) dialTimeAt(n int) time.Time {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.dialTimes[n]
+}
+
+// dialGaps returns the interval between each successive dial attempt.
+func (h *fakeHA) dialGaps() []time.Duration {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	gaps := make([]time.Duration, 0, len(h.dialTimes))
+	for i := 1; i < len(h.dialTimes); i++ {
+		gaps = append(gaps, h.dialTimes[i].Sub(h.dialTimes[i-1]))
+	}
+	return gaps
 }
 
 func newFakeHA(t *testing.T, token string) *fakeHA {
@@ -79,6 +100,7 @@ func (h *fakeHA) dial(ctx context.Context) (transport, error) {
 	h.mu.Lock()
 	h.dials++
 	attempt := h.dials
+	h.dialTimes = append(h.dialTimes, time.Now())
 	if h.refuseAt > 0 && attempt >= h.refuseAt && h.dialErr != nil {
 		err := h.dialErr
 		h.mu.Unlock()
@@ -128,8 +150,9 @@ func (h *fakeHA) serve(conn *fakeConn) {
 		}
 
 		var req struct {
-			ID   int64  `json:"id"`
-			Type string `json:"type"`
+			ID     int64  `json:"id"`
+			Type   string `json:"type"`
+			Marker string `json:"marker"`
 		}
 		if err := json.Unmarshal(raw, &req); err != nil {
 			continue
@@ -145,7 +168,11 @@ func (h *fakeHA) serve(conn *fakeConn) {
 		case typeSubscribeEvents:
 			conn.pushf(`{"id":%d,"type":"result","success":true,"result":null}`, req.ID)
 		default:
-			conn.pushf(`{"id":%d,"type":"result","success":true,"result":null}`, req.ID)
+			// The marker is echoed so a test can tell whose answer this is.
+			// Matching on id alone cannot catch a correlation that hands every
+			// waiter an arbitrary reply.
+			conn.pushf(`{"id":%d,"type":"result","success":true,"result":{"marker":%q}}`,
+				req.ID, req.Marker)
 		}
 	}
 }

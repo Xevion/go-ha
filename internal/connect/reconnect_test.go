@@ -94,24 +94,65 @@ func TestClientBacksOffBetweenFailedAttempts(t *testing.T) {
 		// through several attempts.
 		ha.failDialsFrom(2, context.DeadlineExceeded)
 
-		start := time.Now()
 		ha.current().serverClose()
 
-		// Four refused attempts cost roughly 1+2+4+8 seconds before the base
-		// delay is even reached again; sample partway through that sequence.
-		time.Sleep(4 * time.Second)
+		time.Sleep(2 * time.Minute)
 		synctest.Wait()
 
-		attempts := ha.dialCount()
-		assert.GreaterOrEqual(t, attempts, 2, "it must keep retrying")
-		assert.Less(t, attempts, 8,
-			"delays must grow; a fixed retry would have burned far more attempts by now")
-		assert.GreaterOrEqual(t, time.Since(start), 4*time.Second)
+		// Assert on the shape of the delays themselves. Counting attempts over
+		// a window passes just as happily with a flat retry, which is the whole
+		// behaviour under test.
+		gaps := ha.dialGaps()
+		require.GreaterOrEqual(t, len(gaps), 5, "not enough attempts to show a trend")
+
+		for i := 1; i < len(gaps); i++ {
+			assert.Greater(t, gaps[i], gaps[i-1],
+				"delay %d (%s) did not grow on its predecessor (%s)", i, gaps[i], gaps[i-1])
+		}
+		// Doubling from a one second base reaches well past this by the fifth
+		// attempt; a flat retry never would.
+		assert.Greater(t, gaps[4], 8*time.Second)
 
 		ha.allowDials()
-		time.Sleep(time.Minute)
+		time.Sleep(2 * time.Minute)
 		synctest.Wait()
-		assert.Greater(t, ha.dialCount(), attempts, "it must recover once dials succeed again")
+		assert.Greater(t, ha.dialCount(), len(gaps), "it must recover once dials succeed again")
+	})
+}
+
+func TestClientResetsBackoffAfterAHealthyConnection(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ha := newFakeHA(t, testToken)
+		connectedClient(t, ha, Options{
+			PingInterval: time.Hour,
+			HealthyAfter: 10 * time.Second,
+		})
+		synctest.Wait()
+
+		// Two outages, with a connection that stays up well past HealthyAfter
+		// in between. Each delay is measured from the disconnect that caused
+		// it, so the time spent connected cannot mask the difference.
+		firstOutage := time.Now()
+		ha.current().serverClose()
+		awaitReconnect()
+		firstDelay := ha.dialTimeAt(1).Sub(firstOutage)
+
+		time.Sleep(30 * time.Second)
+		synctest.Wait()
+
+		secondOutage := time.Now()
+		ha.current().serverClose()
+		awaitReconnect()
+		secondDelay := ha.dialTimeAt(2).Sub(secondOutage)
+
+		require.Equal(t, 3, ha.dialCount())
+
+		// The base delay is one second, jittered by at most a fifth. Without
+		// the reset the second outage continues the sequence at two seconds,
+		// which even at its lowest jitter lands above this bound.
+		assert.Less(t, firstDelay, 1300*time.Millisecond)
+		assert.Less(t, secondDelay, 1300*time.Millisecond,
+			"a connection that stayed healthy must return the backoff to its base delay")
 	})
 }
 
