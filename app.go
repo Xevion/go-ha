@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Workiva/go-datastructures/queue"
@@ -34,8 +35,13 @@ type App struct {
 	service *Service
 	state   *state
 
-	schedules       *scheduler
-	intervals       *scheduler
+	schedules *scheduler
+	intervals *scheduler
+
+	// Guards the two listener maps. Dispatch runs on the client's worker
+	// goroutines, which are live from the moment the connection is up, so
+	// registration can no longer assume it has the maps to itself.
+	listenersMu     sync.RWMutex
 	entityListeners map[string][]*EntityListener
 	eventListeners  map[string][]*EventListener
 }
@@ -214,6 +220,9 @@ func (app *App) RegisterIntervals(intervals ...Interval) {
 }
 
 func (app *App) RegisterEntityListeners(etls ...EntityListener) {
+	app.listenersMu.Lock()
+	defer app.listenersMu.Unlock()
+
 	for _, etl := range etls {
 		etl := etl
 		if etl.delay != 0 && etl.toState == "" {
@@ -232,6 +241,9 @@ func (app *App) RegisterEntityListeners(etls ...EntityListener) {
 }
 
 func (app *App) RegisterEventListeners(evls ...EventListener) {
+	var fresh []string
+
+	app.listenersMu.Lock()
 	for _, evl := range evls {
 		evl := evl
 		for _, eventType := range evl.eventTypes {
@@ -239,14 +251,21 @@ func (app *App) RegisterEventListeners(evls ...EventListener) {
 				app.eventListeners[eventType] = append(elList, &evl)
 				continue
 			}
-
 			app.eventListeners[eventType] = []*EventListener{&evl}
-			if err := app.client.Subscribe(
-				connect.Subscription{EventType: eventType},
-				func(msg connect.Message) { callEventListeners(app, msg) },
-			); err != nil {
-				slog.Error("Failed to subscribe to event type", "event_type", eventType, "error", err)
-			}
+			fresh = append(fresh, eventType)
+		}
+	}
+	app.listenersMu.Unlock()
+
+	// Subscribing only once the map is published and unlocked. Home Assistant
+	// starts delivering as soon as the request lands, and those events arrive
+	// on a worker goroutine that has to read the very map being built here.
+	for _, eventType := range fresh {
+		if err := app.client.Subscribe(
+			connect.Subscription{EventType: eventType},
+			func(msg connect.Message) { callEventListeners(app, msg) },
+		); err != nil {
+			slog.Error("Failed to subscribe to event type", "event_type", eventType, "error", err)
 		}
 	}
 }
@@ -285,25 +304,23 @@ func getSunriseSunset(s *state, sunrise bool, dateToUse *carbon.Carbon, offset .
 }
 
 func (app *App) Start() {
+	app.listenersMu.RLock()
+	entityCount, eventCount := len(app.entityListeners), len(app.eventListeners)
+	app.listenersMu.RUnlock()
+
 	slog.Info("Starting",
 		"version", Version,
 		"schedules", app.schedules.len(),
 		"intervals", app.intervals.len(),
-		"entity_listeners", len(app.entityListeners),
-		"event_listeners", len(app.eventListeners),
+		"entity_listeners", entityCount,
+		"event_listeners", eventCount,
 	)
 
 	go runSchedules(app)
 	go runIntervals(app)
 
-	if err := app.client.Subscribe(
-		connect.Subscription{EventType: "state_changed"},
-		func(msg connect.Message) { callEntityListeners(app, msg.Raw) },
-	); err != nil {
-		slog.Error("Failed to subscribe to state changes", "error", err)
-	}
-
 	// Run entity listeners startup
+	app.listenersMu.RLock()
 	for eid, etls := range app.entityListeners {
 		for _, etl := range etls {
 			// ensure each ETL only runs once, even if
@@ -325,6 +342,17 @@ func (app *App) Start() {
 				})
 			}
 		}
+	}
+	app.listenersMu.RUnlock()
+
+	// Subscribing last, so the startup pass owns runOnStartupCompleted
+	// outright. Home Assistant begins delivering as soon as this lands, and
+	// those events reach the same listeners from a worker goroutine.
+	if err := app.client.Subscribe(
+		connect.Subscription{EventType: "state_changed"},
+		func(msg connect.Message) { callEntityListeners(app, msg.Raw) },
+	); err != nil {
+		slog.Error("Failed to subscribe to state changes", "error", err)
 	}
 
 	// Dispatch belongs to the client now: it routes each message to the

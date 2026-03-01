@@ -190,7 +190,10 @@ func callEntityListeners(app *App, msgBytes []byte) {
 	_ = json.Unmarshal(msgBytes, &msg)
 	data := msg.Event.Data
 	eid := data.EntityID
+
+	app.listenersMu.RLock()
 	listeners, ok := app.entityListeners[eid]
+	app.listenersMu.RUnlock()
 	if !ok {
 		// no listeners registered for this id
 		return

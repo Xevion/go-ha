@@ -136,7 +136,9 @@ type BaseEventMsg struct {
 func callEventListeners(app *App, msg connect.Message) {
 	baseEventMsg := BaseEventMsg{}
 	_ = json.Unmarshal(msg.Raw, &baseEventMsg)
+	app.listenersMu.RLock()
 	listeners, ok := app.eventListeners[baseEventMsg.Event.EventType]
+	app.listenersMu.RUnlock()
 	if !ok {
 		// no listeners registered for this event type
 		return
