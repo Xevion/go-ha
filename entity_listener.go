@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dromara/carbon/v2"
-
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/types"
 )
@@ -17,13 +15,15 @@ type EntityListener struct {
 	fromState string
 	toState   string
 	throttle  time.Duration
-	lastRan   *carbon.Carbon
 
 	betweenStart string
 	betweenEnd   string
 
-	delay      time.Duration
-	delayTimer *time.Timer
+	delay time.Duration
+
+	// Shared by every copy this listener's builder chain produces, and by every
+	// worker that dispatches to it.
+	runtime *listenerRuntime
 
 	dateFilter
 
@@ -68,7 +68,7 @@ type msgState struct {
 
 func NewEntityListener() elBuilder1 {
 	return elBuilder1{EntityListener{
-		lastRan: carbon.Now().StartOfCentury(),
+		runtime: newListenerRuntime(),
 	}}
 }
 
@@ -216,12 +216,12 @@ func callEntityListeners(app *App, msgBytes []byte) {
 			continue
 		}
 		if c := CheckStatesMatch(l.toState, data.NewState.State); c.fail {
-			if l.delayTimer != nil {
-				l.delayTimer.Stop()
-			}
+			l.runtime.disarm()
 			continue
 		}
-		if c := CheckThrottle(app.clock, l.throttle, l.lastRan); c.fail {
+		// A cheap reject before the checks below, which reach Home Assistant
+		// over HTTP. The binding decision is made by claim, at fire time.
+		if l.runtime.throttled(app.clock, l.throttle) {
 			continue
 		}
 		if c := CheckExceptionDates(app.clock, l.exceptionDates); c.fail {
@@ -247,16 +247,17 @@ func callEntityListeners(app *App, msgBytes []byte) {
 		}
 
 		if l.delay != 0 {
-			l := l
-			l.delayTimer = time.AfterFunc(l.delay, func() {
+			l.runtime.arm(time.AfterFunc(l.delay, func() {
 				go l.callback(app.service, app.state, entityData)
-				l.lastRan = app.clock.Carbon()
-			})
+				l.runtime.stamp(app.clock)
+			}))
 			continue
 		}
 
 		// run now if no delay set
+		if !l.runtime.claim(app.clock, l.throttle) {
+			continue
+		}
 		go l.callback(app.service, app.state, entityData)
-		l.lastRan = app.clock.Carbon()
 	}
 }

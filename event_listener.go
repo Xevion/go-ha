@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dromara/carbon/v2"
-
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/internal/connect"
 	"github.com/Xevion/go-ha/types"
@@ -18,7 +16,10 @@ type EventListener struct {
 	betweenStart string
 	betweenEnd   string
 	throttle     time.Duration
-	lastRan      *carbon.Carbon
+
+	// Shared by every copy this listener's builder chain produces, and by every
+	// worker that dispatches to it.
+	runtime *listenerRuntime
 
 	dateFilter
 
@@ -35,7 +36,7 @@ type EventData struct {
 
 func NewEventListener() eventListenerBuilder1 {
 	return eventListenerBuilder1{EventListener{
-		lastRan: carbon.Now().StartOfCentury(),
+		runtime: newListenerRuntime(),
 	}}
 }
 
@@ -149,7 +150,9 @@ func callEventListeners(app *App, msg connect.Message) {
 		if c := CheckWithinTimeRange(app.clock, l.betweenStart, l.betweenEnd); c.fail {
 			continue
 		}
-		if c := CheckThrottle(app.clock, l.throttle, l.lastRan); c.fail {
+		// A cheap reject before the checks below, which reach Home Assistant
+		// over HTTP. The binding decision is made by claim, at fire time.
+		if l.runtime.throttled(app.clock, l.throttle) {
 			continue
 		}
 		if c := CheckExceptionDates(app.clock, l.exceptionDates); c.fail {
@@ -169,7 +172,9 @@ func callEventListeners(app *App, msg connect.Message) {
 			Type:         baseEventMsg.Event.EventType,
 			RawEventJSON: msg.Raw,
 		}
+		if !l.runtime.claim(app.clock, l.throttle) {
+			continue
+		}
 		go l.callback(app.service, app.state, eventData)
-		l.lastRan = app.clock.Carbon()
 	}
 }
