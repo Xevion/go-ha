@@ -2,7 +2,7 @@ module github.com/Xevion/go-ha
 
 go 1.25.0
 
-toolchain go1.26.0
+toolchain go1.26.1
 
 require (
 	github.com/Workiva/go-datastructures v1.1.5
