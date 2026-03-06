@@ -164,6 +164,16 @@ func (app *App) Close() error {
 		app.ctxCancel()
 	}
 
+	// Cancel any listener still waiting out a Duration(). Left armed, it fires
+	// after shutdown and runs a callback whose service calls have nowhere to go.
+	app.listenersMu.RLock()
+	for _, etls := range app.entityListeners {
+		for _, etl := range etls {
+			etl.runtime.disarm()
+		}
+	}
+	app.listenersMu.RUnlock()
+
 	if app.client == nil {
 		return nil
 	}
