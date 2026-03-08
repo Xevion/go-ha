@@ -13,7 +13,7 @@ type EnabledDisabledInfo struct {
 }
 
 // Version is the go-ha release this build corresponds to.
-const Version = "0.8.0"
+const Version = "0.9.0"
 
 // GetFunctionName returns the name of the function that the interface is a pointer to.
 func GetFunctionName(i interface{}) string {
