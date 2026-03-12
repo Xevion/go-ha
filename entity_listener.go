@@ -67,9 +67,7 @@ type msgState struct {
 }
 
 func NewEntityListener() elBuilder1 {
-	return elBuilder1{EntityListener{
-		runtime: newListenerRuntime(),
-	}}
+	return elBuilder1{EntityListener{}}
 }
 
 type elBuilder1 struct {
@@ -181,7 +179,14 @@ func (b elBuilder3) DisabledWhen(entityId, state string, runOnNetworkError bool)
 	return b
 }
 
+// Build produces the listener described by this chain.
+//
+// The runtime is allocated here rather than at the head of the chain, because
+// every builder stage returns a copy: allocating earlier would hand the same
+// throttle window and delay timer to every listener branched off a shared
+// prefix.
 func (b elBuilder3) Build() EntityListener {
+	b.entityListener.runtime = newListenerRuntime()
 	return b.entityListener
 }
 

@@ -35,9 +35,7 @@ type EventData struct {
 }
 
 func NewEventListener() eventListenerBuilder1 {
-	return eventListenerBuilder1{EventListener{
-		runtime: newListenerRuntime(),
-	}}
+	return eventListenerBuilder1{EventListener{}}
 }
 
 type eventListenerBuilder1 struct {
@@ -124,7 +122,13 @@ func (b eventListenerBuilder3) DisabledWhen(entityId, state string, runOnNetwork
 	return b
 }
 
+// Build produces the listener described by this chain.
+//
+// The runtime is allocated here rather than at the head of the chain, because
+// every builder stage returns a copy: allocating earlier would hand the same
+// throttle window to every listener branched off a shared prefix.
 func (b eventListenerBuilder3) Build() EventListener {
+	b.eventListener.runtime = newListenerRuntime()
 	return b.eventListener
 }
 
