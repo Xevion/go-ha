@@ -164,8 +164,21 @@ func (app *App) Close() error {
 		app.ctxCancel()
 	}
 
+	var closeErr error
+	if app.client != nil {
+		// Close waits for the client's goroutines, so shutdown no longer
+		// guesses at how long they need with a pair of sleeps.
+		if err := app.client.Close(); err != nil {
+			closeErr = fmt.Errorf("closing connection: %w", err)
+		}
+	}
+
 	// Cancel any listener still waiting out a Duration(). Left armed, it fires
 	// after shutdown and runs a callback whose service calls have nowhere to go.
+	//
+	// This runs after the client has stopped, not before: a handler still in
+	// flight arms its timer from a worker goroutine, and would otherwise slip
+	// one in behind a pass that had already walked past it.
 	app.listenersMu.RLock()
 	for _, etls := range app.entityListeners {
 		for _, etl := range etls {
@@ -174,15 +187,7 @@ func (app *App) Close() error {
 	}
 	app.listenersMu.RUnlock()
 
-	if app.client == nil {
-		return nil
-	}
-	// Close waits for the client's goroutines, so shutdown no longer guesses at
-	// how long they need with a pair of sleeps.
-	if err := app.client.Close(); err != nil {
-		return fmt.Errorf("closing connection: %w", err)
-	}
-	return nil
+	return closeErr
 }
 
 func (app *App) RegisterSchedules(schedules ...DailySchedule) {
