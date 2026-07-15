@@ -46,6 +46,14 @@ type App struct {
 	entityListeners map[string][]*EntityListener
 	eventListeners  map[string][]*EventListener
 
+	// automations maps an event type to the automations waiting on it.
+	automations map[string][]binding
+
+	// runners holds every registered automation's runner, deduplicated because
+	// an automation with several triggers registers once per trigger. Shutdown
+	// waits on these so a run in flight finishes its service calls.
+	runners map[*runner]struct{}
+
 	// started gates listener dispatch. The state_changed subscription exists
 	// from construction so the cache stays current, but listeners must not run
 	// before Start has taken its startup pass.
@@ -155,6 +163,8 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 		intervals:       newScheduler(clock),
 		entityListeners: map[string][]*EntityListener{},
 		eventListeners:  map[string][]*EventListener{},
+		automations:     map[string][]binding{},
+		runners:         map[*runner]struct{}{},
 	}
 
 	// Subscribing before connecting, so the replay that runs on every
@@ -185,6 +195,7 @@ func (app *App) onStateChanged(msg connect.Message) {
 	// has not run yet and owns which listeners it marks completed.
 	if app.started.Load() {
 		callEntityListeners(app, msg.Raw)
+		app.dispatchEvent(msg.Raw)
 	}
 }
 
@@ -223,7 +234,18 @@ func (app *App) Close() error {
 			etl.runtime.disarm()
 		}
 	}
+	runners := make([]*runner, 0, len(app.runners))
+	for r := range app.runners {
+		runners = append(runners, r)
+	}
 	app.listenersMu.RUnlock()
+
+	// Automation runs hold a context derived from the app's, which is already
+	// cancelled, so this waits out work that is winding down rather than work
+	// that is still starting.
+	for _, r := range runners {
+		r.wait()
+	}
 
 	return closeErr
 }
