@@ -89,6 +89,31 @@ func (s *state) seed() error {
 	return nil
 }
 
+// applyEvent folds a state_changed event into the cache. A null new state means
+// the entity was deleted.
+func (s *state) applyEvent(raw []byte) {
+	var msg stateChangedMsg
+	if err := json.Unmarshal(raw, &msg); err != nil {
+		return
+	}
+
+	data := msg.Event.Data
+	if data.EntityID == "" {
+		return
+	}
+	if data.NewState.EntityID == "" && data.NewState.State == "" {
+		s.cache.remove(data.EntityID)
+		return
+	}
+
+	s.cache.apply(EntityState{
+		EntityID:    data.EntityID,
+		State:       data.NewState.State,
+		Attributes:  data.NewState.Attributes,
+		LastChanged: data.NewState.LastChanged,
+	})
+}
+
 func (s *state) Get(entityId string) (EntityState, error) {
 	if es, ok := s.cache.get(entityId); ok {
 		return es, nil

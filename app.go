@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Workiva/go-datastructures/queue"
@@ -44,6 +45,11 @@ type App struct {
 	listenersMu     sync.RWMutex
 	entityListeners map[string][]*EntityListener
 	eventListeners  map[string][]*EventListener
+
+	// started gates listener dispatch. The state_changed subscription exists
+	// from construction so the cache stays current, but listeners must not run
+	// before Start has taken its startup pass.
+	started atomic.Bool
 }
 
 type Item types.Item
@@ -105,24 +111,9 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
 
-	client, err := connect.NewClient(baseURL, request.HAAuthToken, connect.Options{
-		QueueSize:    request.Connection.QueueSize,
-		Workers:      request.Connection.Workers,
-		PingInterval: request.Connection.PingInterval,
-	})
-	if err != nil {
-		ctxCancel()
-		return nil, err
-	}
-	if err := client.Connect(ctx); err != nil {
-		ctxCancel()
-		return nil, err
-	}
-
 	httpClient := internal.NewHttpClient(ctx, baseURL, request.HAAuthToken)
 
 	clock := internal.RealClock{}
-	service := newService(client)
 	state, err := newState(httpClient, request.HomeZoneEntityId)
 	if err != nil {
 		ctxCancel()
@@ -135,19 +126,66 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 		return nil, err
 	}
 
-	return &App{
+	client, err := connect.NewClient(baseURL, request.HAAuthToken, connect.Options{
+		QueueSize:    request.Connection.QueueSize,
+		Workers:      request.Connection.Workers,
+		PingInterval: request.Connection.PingInterval,
+		// Every connection starts with a fresh snapshot. Anything that changed
+		// while the stream was down was never delivered.
+		OnConnected: func() {
+			if err := state.seed(); err != nil {
+				slog.Error("Failed to load entity states", "error", err)
+			}
+		},
+	})
+	if err != nil {
+		ctxCancel()
+		return nil, err
+	}
+
+	app := &App{
 		client:          client,
 		ctx:             ctx,
 		ctxCancel:       ctxCancel,
 		httpClient:      httpClient,
 		clock:           clock,
-		service:         service,
+		service:         newService(client),
 		state:           state,
 		schedules:       newScheduler(clock),
 		intervals:       newScheduler(clock),
 		entityListeners: map[string][]*EntityListener{},
 		eventListeners:  map[string][]*EventListener{},
-	}, nil
+	}
+
+	// Subscribing before connecting, so the replay that runs on every
+	// connection establishes it before the snapshot is taken. Taking the
+	// snapshot first would lose whatever changed in between.
+	if err := client.Subscribe(
+		connect.Subscription{EventType: "state_changed"},
+		app.onStateChanged,
+	); err != nil {
+		ctxCancel()
+		return nil, err
+	}
+
+	if err := client.Connect(ctx); err != nil {
+		ctxCancel()
+		return nil, err
+	}
+
+	return app, nil
+}
+
+// onStateChanged keeps the cache current and, once the app has started, runs
+// the listeners watching the entity.
+func (app *App) onStateChanged(msg connect.Message) {
+	app.state.applyEvent(msg.Raw)
+
+	// Before Start the cache is still worth maintaining, but the startup pass
+	// has not run yet and owns which listeners it marks completed.
+	if app.started.Load() {
+		callEntityListeners(app, msg.Raw)
+	}
 }
 
 // Cleanup shuts the application down.
@@ -360,15 +398,9 @@ func (app *App) Start() {
 	}
 	app.listenersMu.RUnlock()
 
-	// Subscribing last, so the startup pass owns runOnStartupCompleted
-	// outright. Home Assistant begins delivering as soon as this lands, and
-	// those events reach the same listeners from a worker goroutine.
-	if err := app.client.Subscribe(
-		connect.Subscription{EventType: "state_changed"},
-		func(msg connect.Message) { callEntityListeners(app, msg.Raw) },
-	); err != nil {
-		slog.Error("Failed to subscribe to state changes", "error", err)
-	}
+	// Opening the gate last, so the startup pass owns runOnStartupCompleted
+	// outright rather than racing events already arriving from the stream.
+	app.started.Store(true)
 
 	// Dispatch belongs to the client now: it routes each message to the
 	// subscription that asked for it, so there is nothing left to demultiplex

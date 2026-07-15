@@ -61,6 +61,17 @@ func (c *entityCache) apply(es EntityState) {
 	}
 }
 
+// remove forgets an entity that Home Assistant deleted, reported as a state
+// change to a null new state.
+func (c *entityCache) remove(entityId string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.entities, entityId)
+	if c.pending {
+		c.touched[entityId] = struct{}{}
+	}
+}
+
 func (c *entityCache) get(entityId string) (EntityState, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

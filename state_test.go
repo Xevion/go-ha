@@ -135,3 +135,47 @@ func TestGetPropagatesHTTPErrors(t *testing.T) {
 	_, err := s.Get("light.missing")
 	assert.True(t, errors.Is(err, internal.ErrEntityNotFound))
 }
+
+func TestApplyEventUpdatesTheCache(t *testing.T) {
+	s, _ := stateWithServer(t, func(w http.ResponseWriter, r *http.Request) {})
+	s.cache.beginSeed()
+	s.cache.finishSeed([]EntityState{entity("light.kitchen", "on")})
+
+	s.applyEvent([]byte(`{"type":"event","event":{"event_type":"state_changed","data":{
+		"entity_id":"light.kitchen",
+		"old_state":{"entity_id":"light.kitchen","state":"on"},
+		"new_state":{"entity_id":"light.kitchen","state":"off","attributes":{"brightness":12}}}}}`))
+
+	got, ok := s.cache.get("light.kitchen")
+	require.True(t, ok)
+	assert.Equal(t, "off", got.State)
+	assert.Equal(t, float64(12), got.Attributes["brightness"])
+}
+
+func TestApplyEventForgetsDeletedEntities(t *testing.T) {
+	s, _ := stateWithServer(t, func(w http.ResponseWriter, r *http.Request) {})
+	s.cache.beginSeed()
+	s.cache.finishSeed([]EntityState{entity("light.kitchen", "on")})
+
+	// Home Assistant reports a removed entity as a change to a null new state.
+	s.applyEvent([]byte(`{"type":"event","event":{"event_type":"state_changed","data":{
+		"entity_id":"light.kitchen",
+		"old_state":{"entity_id":"light.kitchen","state":"on"},
+		"new_state":null}}}`))
+
+	_, ok := s.cache.get("light.kitchen")
+	assert.False(t, ok, "a deleted entity must not linger in the cache")
+}
+
+func TestApplyEventIgnoresMalformedMessages(t *testing.T) {
+	s, _ := stateWithServer(t, func(w http.ResponseWriter, r *http.Request) {})
+	s.cache.beginSeed()
+	s.cache.finishSeed([]EntityState{entity("light.kitchen", "on")})
+
+	s.applyEvent([]byte(`not json`))
+	s.applyEvent([]byte(`{"event":{"data":{}}}`))
+
+	got, ok := s.cache.get("light.kitchen")
+	require.True(t, ok, "a malformed event must not disturb known state")
+	assert.Equal(t, "on", got.State)
+}
