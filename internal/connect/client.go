@@ -44,6 +44,11 @@ type Options struct {
 	// sequence resets. Without it a connection that dies immediately after each
 	// handshake would retry at the base delay forever.
 	HealthyAfter time.Duration
+
+	// OnConnected runs after a connection is established and its subscriptions
+	// replayed, including after a reconnect. It runs on its own goroutine: the
+	// reader cannot wait on it without backing the socket up.
+	OnConnected func()
 }
 
 // DefaultOptions returns the settings used when none are supplied.
@@ -295,6 +300,7 @@ func (c *Client) run(conn transport) {
 
 	for {
 		c.resubscribe()
+		c.announceConnected()
 
 		connCtx, connCancel := context.WithCancel(c.ctx)
 		var keepalive sync.WaitGroup
@@ -328,6 +334,19 @@ func (c *Client) run(conn transport) {
 		}
 		conn = next
 	}
+}
+
+// announceConnected runs the OnConnected hook off the reader's goroutine, so a
+// slow hook costs nothing but its own time.
+func (c *Client) announceConnected() {
+	if c.opts.OnConnected == nil {
+		return
+	}
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+		c.opts.OnConnected()
+	}()
 }
 
 // reconnect retries until it succeeds, the client is closed, or the token is

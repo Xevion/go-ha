@@ -225,3 +225,49 @@ func TestClientKeepalivePingsWhileIdle(t *testing.T) {
 		assert.Equal(t, 1, ha.dialCount(), "answered pings must not disturb the connection")
 	})
 }
+
+func TestOnConnectedFiresForEveryConnection(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var connects atomic.Int64
+
+		ha := newFakeHA(t, testToken)
+		connectedClient(t, ha, Options{
+			OnConnected: func() { connects.Add(1) },
+		})
+		synctest.Wait()
+		require.Equal(t, int64(1), connects.Load())
+
+		ha.current().serverClose()
+		awaitReconnect()
+
+		// State accumulated from the stream is stale after an outage, so the
+		// hook has to run again rather than only at startup.
+		assert.Equal(t, int64(2), connects.Load(), "the hook must run again after a reconnect")
+	})
+}
+
+func TestOnConnectedDoesNotBlockTheReader(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		release := make(chan struct{})
+
+		ha := newFakeHA(t, testToken)
+		c := connectedClient(t, ha, Options{
+			OnConnected: func() { <-release },
+		})
+
+		var delivered atomic.Int64
+		require.NoError(t, c.Subscribe(Subscription{EventType: "state_changed"}, func(Message) {
+			delivered.Add(1)
+		}))
+		synctest.Wait()
+
+		// Home Assistant drops a client that stops reading for five seconds, so
+		// events must keep flowing while the hook is still running.
+		conn := ha.current()
+		conn.emit(conn.subscriptions()[0], "state_changed")
+		synctest.Wait()
+		assert.Equal(t, int64(1), delivered.Load(), "a slow hook must not stall the reader")
+
+		close(release)
+	})
+}
