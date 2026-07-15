@@ -25,6 +25,7 @@ type StateReader interface {
 // state is used to retrieve state from Home Assistant.
 type state struct {
 	httpClient *internal.HttpClient
+	cache      *entityCache
 	latitude   float64
 	longitude  float64
 }
@@ -37,7 +38,7 @@ type EntityState struct {
 }
 
 func newState(c *internal.HttpClient, homeZoneEntityId string) (*state, error) {
-	s := &state{httpClient: c}
+	s := &state{httpClient: c, cache: newEntityCache()}
 
 	// Ensure the zone exists and has required attributes
 	entity, err := s.Get(homeZoneEntityId)
@@ -70,7 +71,32 @@ func newState(c *internal.HttpClient, homeZoneEntityId string) (*state, error) {
 	return s, nil
 }
 
+// seed replaces the cache with a fresh snapshot of every entity. The window
+// opens before the request so events that race it are not overwritten.
+func (s *state) seed() error {
+	s.cache.beginSeed()
+
+	resp, err := s.httpClient.GetStates()
+	if err != nil {
+		return err
+	}
+	var list []EntityState
+	if err := json.Unmarshal(resp, &list); err != nil {
+		return fmt.Errorf("decoding state snapshot: %w", err)
+	}
+
+	s.cache.finishSeed(list)
+	return nil
+}
+
 func (s *state) Get(entityId string) (EntityState, error) {
+	if es, ok := s.cache.get(entityId); ok {
+		return es, nil
+	}
+	if s.cache.ready() {
+		return EntityState{}, fmt.Errorf("%w: %s", internal.ErrEntityNotFound, entityId)
+	}
+
 	resp, err := s.httpClient.GetState(entityId)
 	if err != nil {
 		return EntityState{}, err
@@ -83,6 +109,10 @@ func (s *state) Get(entityId string) (EntityState, error) {
 // ListEntities returns a list of all entities in Home Assistant.
 // See REST documentation for more details: https://developers.home-assistant.io/docs/api/rest/#actions
 func (s *state) ListEntities() ([]EntityState, error) {
+	if s.cache.ready() {
+		return s.cache.list(), nil
+	}
+
 	resp, err := s.httpClient.GetStates()
 	if err != nil {
 		return nil, err
