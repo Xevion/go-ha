@@ -105,3 +105,53 @@ func TestValidTimeOfDayReportsNoError(t *testing.T) {
 	v := c.(interface{ validate() error })
 	assert.NoError(t, v.validate())
 }
+
+// A daylight saving jump deletes an hour from the local clock. Asking Go for a
+// time inside that gap yields one an hour earlier, so a range whose end lands
+// in the gap used to order end before start, take the midnight-crossing branch,
+// and match nearly the whole day instead of half an hour.
+func TestTimeBetweenSurvivesTheSpringForwardGap(t *testing.T) {
+	chicago, err := time.LoadLocation("America/Chicago")
+	require.NoError(t, err)
+
+	// 2026-03-08: clocks jump 02:00 CST straight to 03:00 CDT.
+	c := TimeBetween(TimeOfDay(1, 45), TimeOfDay(2, 15))
+
+	for _, tt := range []struct {
+		hour, minute int
+		want         bool
+	}{
+		{12, 0, false},
+		{20, 0, false},
+		{1, 50, true},
+		{1, 0, false},
+	} {
+		clock := testClock()
+		clock.Set(time.Date(2026, 3, 8, tt.hour, tt.minute, 0, 0, chicago))
+
+		got, err := c.Eval(context.Background(), EvalContext{Clock: clock})
+		require.NoError(t, err)
+		assert.Equal(t, tt.want, got, "at %02d:%02d on the spring-forward day", tt.hour, tt.minute)
+	}
+}
+
+// The fall-back day repeats an hour. Both passes read the same on the clock
+// face, so both are inside a range that covers it.
+func TestTimeBetweenHandlesTheRepeatedFallBackHour(t *testing.T) {
+	chicago, err := time.LoadLocation("America/Chicago")
+	require.NoError(t, err)
+
+	c := TimeBetween(TimeOfDay(1, 0), TimeOfDay(2, 0))
+
+	first := time.Date(2026, 11, 1, 1, 30, 0, 0, chicago)
+	second := first.Add(time.Hour)
+
+	for _, at := range []time.Time{first, second} {
+		clock := testClock()
+		clock.Set(at)
+
+		got, err := c.Eval(context.Background(), EvalContext{Clock: clock})
+		require.NoError(t, err)
+		assert.True(t, got, "01:30 reads the same on both passes through the hour (%v)", at)
+	}
+}

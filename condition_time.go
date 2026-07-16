@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 )
 
 // ErrInvalidTimeOfDay reports an hour or minute outside a real clock face.
@@ -31,10 +30,9 @@ func (c ClockTime) String() string {
 	return fmt.Sprintf("%02d:%02d", c.hour, c.minute)
 }
 
-// on returns this time of day on the date of ref, in ref's location.
-func (c ClockTime) on(ref time.Time) time.Time {
-	y, m, d := ref.Date()
-	return time.Date(y, m, d, c.hour, c.minute, 0, 0, ref.Location())
+// minuteOfDay is this time as minutes since midnight.
+func (c ClockTime) minuteOfDay() int {
+	return c.hour*60 + c.minute
 }
 
 type timeBetweenCondition struct {
@@ -58,17 +56,22 @@ func BeforeTime(t ClockTime) Condition {
 	return timeBetweenCondition{start: TimeOfDay(0, 0), end: t}
 }
 
+// Eval compares wall-clock minutes rather than building absolute instants.
+// A daylight saving jump deletes an hour from the local clock: asking Go for a
+// time inside the gap silently yields one an hour earlier, which can order the
+// end of a range before its start and turn a half hour window into almost the
+// whole day. Reading the clock face directly is also what the range means.
 func (c timeBetweenCondition) Eval(_ context.Context, ec EvalContext) (bool, error) {
 	now := ec.Clock.Now()
-	start := c.start.on(now)
-	end := c.end.on(now)
+	current := now.Hour()*60 + now.Minute()
+	start, end := c.start.minuteOfDay(), c.end.minuteOfDay()
 
 	// An end at or before the start means the range runs through midnight, so
 	// the two halves are on either side of it rather than between them.
-	if !end.After(start) {
-		return !now.Before(start) || now.Before(end), nil
+	if end <= start {
+		return current >= start || current < end, nil
 	}
-	return !now.Before(start) && now.Before(end), nil
+	return current >= start && current < end, nil
 }
 
 func (c timeBetweenCondition) validate() error {
