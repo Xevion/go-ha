@@ -40,9 +40,14 @@ func (c *entityCache) finishSeed(list []EntityState) {
 	for _, es := range list {
 		next[es.EntityID] = es
 	}
+	// A touched entity is authoritative either way: present because the stream
+	// updated it, or absent because the stream removed it. Only carrying the
+	// present ones lets the snapshot resurrect a deletion that raced it.
 	for id := range c.touched {
 		if es, ok := c.entities[id]; ok {
 			next[id] = es
+		} else {
+			delete(next, id)
 		}
 	}
 
