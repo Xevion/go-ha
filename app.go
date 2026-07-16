@@ -54,6 +54,11 @@ type App struct {
 	// waits on these so a run in flight finishes its service calls.
 	runners map[*runner]struct{}
 
+	// loops tracks the schedule and interval goroutines. They admit runs of
+	// their own, so shutdown has to join them before waiting on any runner: a
+	// WaitGroup may not be raised from zero while a Wait on it is in flight.
+	loops sync.WaitGroup
+
 	// started gates listener dispatch. The state_changed subscription exists
 	// from construction so the cache stays current, but listeners must not run
 	// before Start has taken its startup pass.
@@ -240,6 +245,12 @@ func (app *App) Close() error {
 	}
 	app.listenersMu.RUnlock()
 
+	// The schedule and interval loops admit runs of their own, so they have to
+	// be quiescent before any runner is waited on. Otherwise a loop that has
+	// already passed its cancellation check admits a run behind the pass, and
+	// raising a WaitGroup from zero under an in-flight Wait is a hard throw.
+	app.loops.Wait()
+
 	// Automation runs hold a context derived from the app's, which is already
 	// cancelled, so this waits out work that is winding down rather than work
 	// that is still starting.
@@ -391,8 +402,9 @@ func (app *App) Start() {
 		"event_listeners", eventCount,
 	)
 
-	go runSchedules(app)
-	go runIntervals(app)
+	app.loops.Add(2)
+	go func() { defer app.loops.Done(); runSchedules(app) }()
+	go func() { defer app.loops.Done(); runIntervals(app) }()
 
 	// Run entity listeners startup
 	app.listenersMu.RLock()
