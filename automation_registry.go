@@ -72,9 +72,9 @@ func (app *App) RegisterAutomations(automations ...Automation) error {
 		// has to measure against the same clock its conditions read.
 		a.runtime.withClock(app.clock)
 
-		app.listenersMu.Lock()
+		app.registryMu.Lock()
 		app.runners[a.runtime] = struct{}{}
-		app.listenersMu.Unlock()
+		app.registryMu.Unlock()
 
 		for _, t := range a.triggers {
 			schedule, isSchedule := t.(ScheduleTrigger)
@@ -123,14 +123,14 @@ func (app *App) subscribeAutomation(a Automation, trig EventTrigger) error {
 	var fresh []string
 	b := binding{automation: a, trigger: trig, pending: newPendingRuns()}
 
-	app.listenersMu.Lock()
+	app.registryMu.Lock()
 	for _, sub := range trig.Subscriptions() {
 		if _, seen := app.automations[sub.EventType]; !seen {
 			fresh = append(fresh, sub.EventType)
 		}
 		app.automations[sub.EventType] = append(app.automations[sub.EventType], b)
 	}
-	app.listenersMu.Unlock()
+	app.registryMu.Unlock()
 
 	// Subscribing only after the map is published and unlocked. Home Assistant
 	// delivers as soon as the request lands, on a worker goroutine that reads
@@ -160,9 +160,9 @@ func (app *App) dispatchEvent(raw []byte) {
 		return
 	}
 
-	app.listenersMu.RLock()
+	app.registryMu.RLock()
 	bindings := app.automations[ev.Type]
-	app.listenersMu.RUnlock()
+	app.registryMu.RUnlock()
 	if len(bindings) == 0 {
 		return
 	}

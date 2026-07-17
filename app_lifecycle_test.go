@@ -33,6 +33,7 @@ func TestCloseWaitsOutScheduleTriggeredRuns(t *testing.T) {
 			intervals:   newScheduler(clock),
 			automations: map[string][]binding{},
 			runners:     map[*runner]struct{}{},
+			rescheduled: make(chan struct{}, 1),
 		}
 
 		a := NewAutomation("fast").
@@ -49,7 +50,7 @@ func TestCloseWaitsOutScheduleTriggeredRuns(t *testing.T) {
 
 		// Mirrors what Start does, which is where the loops are registered.
 		app.loops.Add(1)
-		go func() { defer app.loops.Done(); runSchedules(app) }()
+		go func() { defer app.loops.Done(); app.schedules.run(app.ctx, app.rescheduled, "schedules") }()
 
 		time.Sleep(3 * time.Millisecond)
 

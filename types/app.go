@@ -3,35 +3,14 @@ package types
 // NewAppRequest contains the configuration for creating a new App instance.
 type NewAppRequest struct {
 	// Required
+	// URL of your Home Assistant instance, e.g. "http://localhost:8123".
+	// The scheme decides whether the connection is plain or TLS.
 	URL string
-
-	// Optional
-	// Deprecated: use URL instead
-	// IpAddress of your Home Assistant instance, e.g. "localhost"
-	// or "192.168.86.59" etc.
-	IpAddress string
-
-	// Optional
-	// Deprecated: use URL instead
-	// Port number Home Assistant is running on. Defaults to 8123.
-	Port string
 
 	// Required
 	// Auth token generated in Home Assistant. Used
 	// to connect to the WebSocket API.
 	HAAuthToken string
-
-	// Required
-	// EntityId of the zone representing your home, e.g. "zone.home".
-	// Used to pull latitude/longitude from Home Assistant
-	// to calculate sunset/sunrise times.
-	HomeZoneEntityId string
-
-	// Optional
-	// Whether to use secure connections for HTTP and WebSockets.
-	// Setting this to `true` will use `https://` instead of `http://`
-	// and `wss://` instead of `ws://`.
-	Secure bool
 
 	// Optional
 	// Connection tunes the websocket connection. The zero value uses defaults

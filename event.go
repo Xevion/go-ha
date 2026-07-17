@@ -1,6 +1,9 @@
 package ha
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 // eventEnvelope reads only the event type. Decoding it separately matters:
 // integrations put arbitrary shapes in data, and a call_service event whose
@@ -93,4 +96,13 @@ type Event struct {
 	// Raw is the undecoded payload, for event types this package does not
 	// model.
 	Raw []byte
+}
+
+// msgState is a state as it appears inside a state_changed payload.
+type msgState struct {
+	EntityID    string         `json:"entity_id"`
+	LastChanged time.Time      `json:"last_changed"`
+	LastUpdated time.Time      `json:"last_updated"`
+	State       string         `json:"state"`
+	Attributes  map[string]any `json:"attributes"`
 }

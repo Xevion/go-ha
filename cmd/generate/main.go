@@ -15,11 +15,10 @@ import (
 )
 
 type Config struct {
-	URL              string   `yaml:"url"`
-	HAAuthToken      string   `yaml:"ha_auth_token"`
-	HomeZoneEntityId string   `yaml:"home_zone_entity_id,omitempty"` // Now optional
-	IncludeDomains   []string `yaml:"include_domains,omitempty"`     // Optional list of domains to include
-	ExcludeDomains   []string `yaml:"exclude_domains,omitempty"`     // Optional list of domains to exclude
+	URL            string   `yaml:"url"`
+	HAAuthToken    string   `yaml:"ha_auth_token"`
+	IncludeDomains []string `yaml:"include_domains,omitempty"` // Optional list of domains to include
+	ExcludeDomains []string `yaml:"exclude_domains,omitempty"` // Optional list of domains to exclude
 }
 
 type Domain struct {
@@ -67,42 +66,12 @@ func toCamelCase(s string) string {
 	return result.String()
 }
 
-// validateHomeZone verifies that the home zone entity exists and is valid.
-func validateHomeZone(state ha.StateReader, entityID string) error {
-	entity, err := state.Get(entityID)
-	if err != nil {
-		return fmt.Errorf("home zone entity '%s' not found: %w", entityID, err)
-	}
-
-	// Ensure it's a zone entity
-	if !strings.HasPrefix(entityID, "zone.") {
-		return fmt.Errorf("entity '%s' is not a zone entity (must start with zone.)", entityID)
-	}
-
-	// Verify it has latitude and longitude
-	if entity.Attributes == nil {
-		return fmt.Errorf("home zone entity '%s' has no attributes", entityID)
-	}
-	if entity.Attributes["latitude"] == nil {
-		return fmt.Errorf("home zone entity '%s' missing latitude attribute", entityID)
-	}
-	if entity.Attributes["longitude"] == nil {
-		return fmt.Errorf("home zone entity '%s' missing longitude attribute", entityID)
-	}
-
-	return nil
-}
-
 // generate creates the entities.go file with constants for all Home Assistant entities.
 func generate(config Config) error {
-	if config.HomeZoneEntityId == "" {
-		config.HomeZoneEntityId = "zone.home"
-	}
 
 	app, err := ha.NewApp(types.NewAppRequest{
-		URL:              config.URL,
-		HAAuthToken:      config.HAAuthToken,
-		HomeZoneEntityId: config.HomeZoneEntityId,
+		URL:         config.URL,
+		HAAuthToken: config.HAAuthToken,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create app: %w", err)
@@ -110,9 +79,6 @@ func generate(config Config) error {
 	defer app.Cleanup()
 
 	// Validate that the home zone exists before proceeding
-	if err := validateHomeZone(app.State(), config.HomeZoneEntityId); err != nil {
-		return fmt.Errorf("invalid home zone: %w", err)
-	}
 
 	entities, err := app.State().ListEntities()
 	if err != nil {

@@ -3,21 +3,13 @@ package ha
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/dromara/carbon/v2"
-
 	"github.com/Xevion/go-ha/internal"
-	"github.com/Xevion/go-ha/types"
 )
 
 type StateReader interface {
-	AfterSunrise(...types.DurationString) bool
-	BeforeSunrise(...types.DurationString) bool
-	AfterSunset(...types.DurationString) bool
-	BeforeSunset(...types.DurationString) bool
 	ListEntities() ([]EntityState, error)
 	Get(entityId string) (EntityState, error)
 	Equals(entityId, state string) (bool, error)
@@ -30,9 +22,6 @@ type state struct {
 
 	// seedMu serialises snapshot fetches against each other.
 	seedMu sync.Mutex
-
-	latitude  float64
-	longitude float64
 }
 
 type EntityState struct {
@@ -48,38 +37,10 @@ type EntityState struct {
 	LastUpdated time.Time `json:"last_updated"`
 }
 
-func newState(c *internal.HttpClient, homeZoneEntityId string) (*state, error) {
-	s := &state{httpClient: c, cache: newEntityCache()}
-
-	// Ensure the zone exists and has required attributes
-	entity, err := s.Get(homeZoneEntityId)
-	if err != nil {
-		return nil, fmt.Errorf("home zone entity '%s' not found: %w", homeZoneEntityId, err)
-	}
-
-	// Ensure it's a zone entity
-	if !strings.HasPrefix(homeZoneEntityId, "zone.") {
-		return nil, fmt.Errorf("entity '%s' is not a zone entity (must start with zone.)", homeZoneEntityId)
-	}
-
-	// Verify and extract latitude and longitude
-	if entity.Attributes == nil {
-		return nil, fmt.Errorf("home zone entity '%s' has no attributes", homeZoneEntityId)
-	}
-
-	if lat, ok := entity.Attributes["latitude"].(float64); ok {
-		s.latitude = lat
-	} else {
-		return nil, fmt.Errorf("home zone entity '%s' missing valid latitude attribute", homeZoneEntityId)
-	}
-
-	if long, ok := entity.Attributes["longitude"].(float64); ok {
-		s.longitude = long
-	} else {
-		return nil, fmt.Errorf("home zone entity '%s' missing valid longitude attribute", homeZoneEntityId)
-	}
-
-	return s, nil
+// newState builds a reader backed by an empty cache. It fills on the first
+// connection, when the snapshot is fetched.
+func newState(c *internal.HttpClient) *state {
+	return &state{httpClient: c, cache: newEntityCache()}
 }
 
 // seed replaces the cache with a fresh snapshot of every entity. The window
@@ -163,22 +124,4 @@ func (s *state) Equals(entityId string, expectedState string) (bool, error) {
 		return false, err
 	}
 	return currentState.State == expectedState, nil
-}
-
-func (s *state) BeforeSunrise(offset ...types.DurationString) bool {
-	sunrise := getSunriseSunset(s, true, carbon.Now(), offset...)
-	return carbon.Now().Lt(sunrise)
-}
-
-func (s *state) AfterSunrise(offset ...types.DurationString) bool {
-	return !s.BeforeSunrise(offset...)
-}
-
-func (s *state) BeforeSunset(offset ...types.DurationString) bool {
-	sunset := getSunriseSunset(s, false, carbon.Now(), offset...)
-	return carbon.Now().Lt(sunset)
-}
-
-func (s *state) AfterSunset(offset ...types.DurationString) bool {
-	return !s.BeforeSunset(offset...)
 }

@@ -145,26 +145,6 @@ func TestAppWithWebsocketConnection(t *testing.T) {
 	}
 }
 
-func TestAppRegisterMethods(t *testing.T) {
-	// Test that register methods don't panic with empty app
-	app := &App{
-		entityListeners: make(map[string][]*EntityListener),
-		eventListeners:  make(map[string][]*EventListener),
-	}
-
-	// Test registering empty schedules
-	app.RegisterSchedules()
-
-	// Test registering empty intervals
-	app.RegisterIntervals()
-
-	// Test registering empty entity listeners
-	app.RegisterEntityListeners()
-
-	// Test registering empty event listeners
-	app.RegisterEventListeners()
-}
-
 func TestAppContextCancellation(t *testing.T) {
 	// Test that context cancellation works properly
 	ctx, cancel := context.WithCancel(context.Background())

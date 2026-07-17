@@ -235,39 +235,6 @@ func TestSchedulerRunDueSurvivesAnExhaustedTrigger(t *testing.T) {
 	}
 }
 
-func TestSchedulerOrdersMixedTriggerKinds(t *testing.T) {
-	s := newScheduler(internal.NewFakeClock(schedulerBase))
-	nyc := scheduling.Location{Latitude: 40.7128, Longitude: -74.0060}
-
-	for _, build := range []func() *scheduling.DailyScheduleBuilder{
-		func() *scheduling.DailyScheduleBuilder { return scheduling.NewSchedule().OnFixedTime(18, 0) },
-		func() *scheduling.DailyScheduleBuilder { return scheduling.NewSchedule().OnCron("0 7 * * *") },
-		func() *scheduling.DailyScheduleBuilder { return scheduling.NewSchedule().OnSunset() },
-	} {
-		spec, err := build().Build()
-		require.NoError(t, err)
-
-		trigger, err := spec.Resolve(nyc)
-		require.NoError(t, err)
-		require.True(t, s.add(trigger, noop))
-	}
-
-	require.Equal(t, 3, s.len(), "a cron, a fixed time and a sun trigger must all be queued")
-
-	got := make([]time.Time, 0, 3)
-	for s.len() > 0 {
-		entry := s.pop()
-		require.NotNil(t, entry)
-		got = append(got, entry.fireAt)
-	}
-
-	require.Len(t, got, 3)
-	for i := 1; i < len(got); i++ {
-		assert.False(t, got[i].Before(got[i-1]),
-			"pop order must be ascending, got %s then %s", got[i-1], got[i])
-	}
-}
-
 func TestSchedulerKeepsDistinctEntriesAtTheSameInstant(t *testing.T) {
 	s := newScheduler(internal.NewFakeClock(schedulerBase))
 
@@ -284,42 +251,4 @@ func TestSchedulerKeepsDistinctEntriesAtTheSameInstant(t *testing.T) {
 	}
 
 	assert.ElementsMatch(t, []string{"first", "second"}, fired)
-}
-
-func TestSchedulerDropsExhaustedTrigger(t *testing.T) {
-	december := time.Date(2025, time.December, 21, 12, 0, 0, 0, time.UTC)
-	s := newScheduler(internal.NewFakeClock(december))
-
-	builder := scheduling.NewSchedule()
-	builder.OnSunrise()
-	spec, err := builder.Build()
-	require.NoError(t, err)
-
-	// Longyearbyen, well inside the Arctic Circle. The sun does not rise there in
-	// December, so NextTime is documented to return nil.
-	trigger, err := spec.Resolve(scheduling.Location{Latitude: 78.2232, Longitude: 15.6267})
-	require.NoError(t, err)
-
-	require.Nil(t, trigger.NextTime(december), "fixture must actually exercise the nil path")
-
-	assert.NotPanics(t, func() { s.add(trigger, noop) })
-	assert.Zero(t, s.len(), "a trigger with no next occurrence must not be queued")
-}
-
-func TestSchedulerQueuesSunTriggers(t *testing.T) {
-	s := newScheduler(internal.NewFakeClock(schedulerBase))
-
-	builder := scheduling.NewSchedule()
-	builder.OnSunset()
-	spec, err := builder.Build()
-	require.NoError(t, err)
-
-	trigger, err := spec.Resolve(scheduling.Location{Latitude: 40.7128, Longitude: -74.0060})
-	require.NoError(t, err)
-
-	s.add(trigger, noop)
-
-	entry := s.pop()
-	require.NotNil(t, entry, "a sun trigger must reach the queue rather than being dropped")
-	assert.False(t, entry.fireAt.IsZero())
 }

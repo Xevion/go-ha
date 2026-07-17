@@ -1,6 +1,7 @@
 package ha
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
@@ -156,4 +157,46 @@ func (s *scheduler) refresh(now time.Time) int {
 	}
 
 	return moved
+}
+
+// run drives the scheduler until the context is cancelled. It fires everything
+// due, then sleeps until the next entry falls due, a dynamic trigger moves, or
+// the app shuts down.
+func (s *scheduler) run(ctx context.Context, rescheduled <-chan struct{}, what string) {
+	for {
+		if ctx.Err() != nil {
+			slog.Info("Scheduler shutting down", "kind", what)
+			return
+		}
+
+		// Everything already due fires here, so a process suspended across
+		// several slots catches up rather than losing them.
+		s.runDue(s.clock.Now())
+
+		entry := s.peek()
+		if entry == nil {
+			slog.Info("Nothing left to run", "kind", what)
+			return
+		}
+
+		timer := time.NewTimer(time.Until(entry.fireAt))
+		select {
+		case <-timer.C:
+		case <-rescheduled:
+			// A dynamic trigger moved, and the new time can be earlier than
+			// the one being slept on, so the queue is re-read.
+			timer.Stop()
+		case <-ctx.Done():
+			timer.Stop()
+			slog.Info("Scheduler shutting down", "kind", what)
+			return
+		}
+	}
+}
+
+// sameDate reports whether a and b fall on the same calendar day.
+func sameDate(a, b time.Time) bool {
+	y1, m1, d1 := a.Date()
+	y2, m2, d2 := b.Date()
+	return y1 == y2 && m1 == m2 && d1 == d2
 }
