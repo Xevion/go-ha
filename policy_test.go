@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Xevion/go-ha/internal"
 )
 
 // noRun is a run that returns immediately.
@@ -73,17 +75,34 @@ func TestSingleIgnoresTriggersWhileRunning(t *testing.T) {
 	r.wait()
 }
 
-func TestSingleIsKeyedPerEntity(t *testing.T) {
+// Mode is automation-wide, as it is in Home Assistant: "single" there means one
+// run of the automation, not one per entity. Throttle is the per-entity half.
+func TestSingleAppliesAcrossEntities(t *testing.T) {
 	r := newRunner(Policy{Mode: ModeSingle}, testClock())
 	fn, release, entered := blocking()
 
 	require.True(t, r.run(context.Background(), "light.slow", fn))
 	waitFor(t, entered, 1)
 
-	assert.True(t, r.run(context.Background(), "light.other", fn),
-		"a run for one entity must not block another")
+	assert.False(t, r.run(context.Background(), "light.other", fn),
+		"single means one run of the automation, whichever entity triggered it")
 
 	close(release)
+	r.wait()
+}
+
+func TestRunnerUsesTheInjectedClock(t *testing.T) {
+	clock := testClock()
+	r := newRunner(Policy{Mode: ModeParallel, Throttle: time.Hour}, internal.RealClock{})
+	r.withClock(clock)
+
+	require.True(t, r.run(context.Background(), "key", noRun))
+	require.False(t, r.run(context.Background(), "key", noRun))
+
+	clock.Advance(time.Hour)
+	assert.True(t, r.run(context.Background(), "key", noRun),
+		"the throttle window must move with the clock conditions read")
+
 	r.wait()
 }
 

@@ -55,6 +55,11 @@ func (app *App) RegisterAutomations(automations ...Automation) error {
 			continue
 		}
 
+		// Build has no App to read a clock from, so it starts on the real one.
+		// Registration is where the automation joins an app, and its throttle
+		// has to measure against the same clock its conditions read.
+		a.runtime.withClock(app.clock)
+
 		app.listenersMu.Lock()
 		app.runners[a.runtime] = struct{}{}
 		app.listenersMu.Unlock()

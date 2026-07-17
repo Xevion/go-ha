@@ -66,11 +66,22 @@ func (p Policy) limit() int {
 	return defaultLimit
 }
 
-// slot is the per-key execution state. Keying matters: one automation can watch
-// many entities, and a single shared slot lets a busy entity consume the
-// throttle window and cancel the runs of every other one.
-type slot struct {
-	lastRan time.Time
+// runner enforces one automation's policy.
+//
+// The two halves are scoped differently on purpose. Mode is automation-wide,
+// as it is in Home Assistant: "single" there means one run of the automation,
+// not one per entity. Throttle is per entity, because an automation watching
+// many of them otherwise lets a busy entity consume the window belonging to
+// every other one.
+type runner struct {
+	policy Policy
+	clock  internal.Clock
+
+	mu sync.Mutex
+
+	// lastRan holds the last admitted run per throttle key.
+	lastRan map[string]time.Time
+
 	active  int
 	waiting int
 
@@ -79,15 +90,6 @@ type slot struct {
 
 	// serial holds a queued run while another is in flight.
 	serial sync.Mutex
-}
-
-// runner enforces one automation's policy.
-type runner struct {
-	policy Policy
-	clock  internal.Clock
-
-	mu    sync.Mutex
-	slots map[string]*slot
 
 	// wg tracks in-flight runs so shutdown can wait them out instead of
 	// abandoning them mid-service-call.
@@ -95,63 +97,62 @@ type runner struct {
 }
 
 func newRunner(policy Policy, clock internal.Clock) *runner {
-	return &runner{policy: policy, clock: clock, slots: map[string]*slot{}}
+	return &runner{policy: policy, clock: clock, lastRan: map[string]time.Time{}}
 }
 
-func (r *runner) slotFor(key string) *slot {
-	s, ok := r.slots[key]
-	if !ok {
-		s = &slot{}
-		r.slots[key] = s
-	}
-	return s
+// withClock points the runner at the app's clock. Conditions already read it,
+// and a throttle measured against a different clock than the conditions it
+// gates is not testable and not coherent.
+func (r *runner) withClock(clock internal.Clock) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.clock = clock
 }
 
 // run admits a trigger under the policy and reports whether it was accepted.
 // The work happens on its own goroutine, so the caller, which is a dispatch
 // worker, is never held by a slow automation.
 func (r *runner) run(parent context.Context, key string, fn func(context.Context)) bool {
-	now := r.clock.Now()
-
 	r.mu.Lock()
-	s := r.slotFor(key)
+	now := r.clock.Now()
 
 	// Admission and the stamp that records it are one critical section, so two
 	// triggers cannot both read the same lastRan and both decide they are past
 	// the window.
-	if r.policy.Throttle > 0 && !s.lastRan.IsZero() && now.Sub(s.lastRan) < r.policy.Throttle {
+	if last, seen := r.lastRan[key]; r.policy.Throttle > 0 && seen &&
+		now.Sub(last) < r.policy.Throttle {
 		r.mu.Unlock()
 		return false
 	}
 
 	switch r.policy.Mode {
 	case ModeSingle:
-		if s.active > 0 {
+		if r.active > 0 {
 			r.mu.Unlock()
 			return false
 		}
 	case ModeRestart:
-		if s.cancel != nil {
-			s.cancel()
+		if r.cancel != nil {
+			r.cancel()
 		}
 	case ModeQueued:
-		if s.waiting >= r.policy.limit() {
+		if r.waiting >= r.policy.limit() {
 			r.mu.Unlock()
 			return false
 		}
-		s.waiting++
+		r.waiting++
 	case ModeParallel:
-		if s.active >= r.policy.limit() {
+		if r.active >= r.policy.limit() {
 			r.mu.Unlock()
 			return false
 		}
 	}
 
-	s.lastRan = now
-	s.active++
+	r.lastRan[key] = now
+	r.active++
 
 	ctx, cancel := context.WithCancel(parent)
-	s.cancel = cancel
+	r.cancel = cancel
 
 	queued := r.policy.Mode == ModeQueued
 	r.mu.Unlock()
@@ -164,25 +165,25 @@ func (r *runner) run(parent context.Context, key string, fn func(context.Context
 		if queued {
 			// Held for the duration of the run, which is what keeps queued runs
 			// from overlapping.
-			s.serial.Lock()
-			defer s.serial.Unlock()
+			r.serial.Lock()
+			defer r.serial.Unlock()
 
 			r.mu.Lock()
-			s.waiting--
+			r.waiting--
 			r.mu.Unlock()
 		}
 
-		defer r.finish(s)
+		defer r.finish()
 		fn(ctx)
 	}()
 
 	return true
 }
 
-func (r *runner) finish(s *slot) {
+func (r *runner) finish() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	s.active--
+	r.active--
 }
 
 // wait blocks until every admitted run has finished.
