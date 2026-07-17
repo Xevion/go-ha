@@ -57,9 +57,20 @@ func (c *entityCache) finishSeed(list []EntityState) {
 	c.seeded = true
 }
 
+// apply folds an update in, unless it is older than what is already stored.
+// Events are handled by a pool of workers, so two updates to one entity can
+// arrive here in either order; without this the loser of that race would be
+// left in the cache permanently.
 func (c *entityCache) apply(es EntityState) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if existing, ok := c.entities[es.EntityID]; ok &&
+		!es.LastUpdated.IsZero() && !existing.LastUpdated.IsZero() &&
+		es.LastUpdated.Before(existing.LastUpdated) {
+		return
+	}
+
 	c.entities[es.EntityID] = es
 	if c.pending {
 		c.touched[es.EntityID] = struct{}{}

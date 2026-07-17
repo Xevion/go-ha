@@ -97,3 +97,38 @@ func TestCacheListsEntities(t *testing.T) {
 
 	assert.Len(t, c.list(), 2)
 }
+
+// Events are dispatched by a pool of workers, so two updates to one entity can
+// be applied in either order. The later one has to win regardless of which
+// worker gets there first, or the cache is left permanently stale.
+func TestApplyIgnoresAnUpdateOlderThanTheStoredOne(t *testing.T) {
+	c := newEntityCache()
+	c.beginSeed()
+	c.finishSeed(nil)
+
+	at := func(s string, secs int) EntityState {
+		return EntityState{
+			EntityID:    "light.kitchen",
+			State:       s,
+			LastUpdated: time.Date(2026, 7, 19, 3, 0, secs, 0, time.UTC),
+		}
+	}
+
+	c.apply(at("on", 30))
+	c.apply(at("off", 10))
+
+	got, _ := c.get("light.kitchen")
+	assert.Equal(t, "on", got.State, "an update that overtook a newer one must not win")
+}
+
+func TestApplyAcceptsUpdatesWithoutTimestamps(t *testing.T) {
+	c := newEntityCache()
+	c.beginSeed()
+	c.finishSeed(nil)
+
+	c.apply(entity("light.kitchen", "on"))
+	c.apply(entity("light.kitchen", "off"))
+
+	got, _ := c.get("light.kitchen")
+	assert.Equal(t, "off", got.State, "without timestamps there is no ordering to enforce")
+}

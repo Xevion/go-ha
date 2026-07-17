@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dromara/carbon/v2"
@@ -26,8 +27,12 @@ type StateReader interface {
 type state struct {
 	httpClient *internal.HttpClient
 	cache      *entityCache
-	latitude   float64
-	longitude  float64
+
+	// seedMu serialises snapshot fetches against each other.
+	seedMu sync.Mutex
+
+	latitude  float64
+	longitude float64
 }
 
 type EntityState struct {
@@ -79,7 +84,14 @@ func newState(c *internal.HttpClient, homeZoneEntityId string) (*state, error) {
 
 // seed replaces the cache with a fresh snapshot of every entity. The window
 // opens before the request so events that race it are not overwritten.
+//
+// Seeds are serialised. Two reconnects in quick succession each fetch a
+// snapshot, and overlapping them lets the older response install last and
+// discards the newer window's events along with it.
 func (s *state) seed() error {
+	s.seedMu.Lock()
+	defer s.seedMu.Unlock()
+
 	s.cache.beginSeed()
 
 	resp, err := s.httpClient.GetStates()
@@ -98,26 +110,16 @@ func (s *state) seed() error {
 // applyEvent folds a state_changed event into the cache. A null new state means
 // the entity was deleted.
 func (s *state) applyEvent(raw []byte) {
-	var msg stateChangedMsg
-	if err := json.Unmarshal(raw, &msg); err != nil {
+	ev := parseEvent(raw)
+	if ev.Type != eventStateChanged || ev.EntityID == "" {
 		return
 	}
 
-	data := msg.Event.Data
-	if data.EntityID == "" {
+	if ev.Deleted {
+		s.cache.remove(ev.EntityID)
 		return
 	}
-	if data.NewState.EntityID == "" && data.NewState.State == "" {
-		s.cache.remove(data.EntityID)
-		return
-	}
-
-	s.cache.apply(EntityState{
-		EntityID:    data.EntityID,
-		State:       data.NewState.State,
-		Attributes:  data.NewState.Attributes,
-		LastChanged: data.NewState.LastChanged,
-	})
+	s.cache.apply(ev.To)
 }
 
 func (s *state) Get(entityId string) (EntityState, error) {
