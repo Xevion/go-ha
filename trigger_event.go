@@ -45,6 +45,12 @@ func (t StateChangeTrigger) Matches(ev Event) bool {
 		return false
 	}
 
+	// A removed entity did not transition to anything. Firing here would hand
+	// the action an empty state that reads like a real one.
+	if ev.Deleted {
+		return false
+	}
+
 	// Home Assistant emits a state_changed whenever attributes move too. A
 	// transition to the state it already held is not a change worth firing on.
 	if ev.To.State == ev.From.State {

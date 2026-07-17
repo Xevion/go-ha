@@ -62,6 +62,7 @@ type stateChangedMsg struct {
 type msgState struct {
 	EntityID    string         `json:"entity_id"`
 	LastChanged time.Time      `json:"last_changed"`
+	LastUpdated time.Time      `json:"last_updated"`
 	State       string         `json:"state"`
 	Attributes  map[string]any `json:"attributes"`
 }

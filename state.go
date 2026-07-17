@@ -31,10 +31,16 @@ type state struct {
 }
 
 type EntityState struct {
-	EntityID    string         `json:"entity_id"`
-	State       string         `json:"state"`
-	Attributes  map[string]any `json:"attributes"`
-	LastChanged time.Time      `json:"last_changed"`
+	EntityID   string         `json:"entity_id"`
+	State      string         `json:"state"`
+	Attributes map[string]any `json:"attributes"`
+
+	// LastChanged moves only when the state itself changes.
+	LastChanged time.Time `json:"last_changed"`
+
+	// LastUpdated moves on any change, attributes included, which is what
+	// orders two updates to the same entity.
+	LastUpdated time.Time `json:"last_updated"`
 }
 
 func newState(c *internal.HttpClient, homeZoneEntityId string) (*state, error) {

@@ -75,3 +75,62 @@ func TestModeNames(t *testing.T) {
 	assert.Equal(t, "queued", ModeQueued.String())
 	assert.Equal(t, "parallel", ModeParallel.String())
 }
+
+// Integrations put arbitrary shapes in an event's data. A call_service event
+// carries entity_id as a list, which does not fit the state_changed schema;
+// decoding both together dropped the whole event.
+func TestParseEventKeepsEventsWhoseDataCollidesWithStateChanged(t *testing.T) {
+	ev := parseEvent([]byte(`{"type":"event","event":{"event_type":"call_service","data":{
+		"domain":"light","service":"turn_on",
+		"service_data":{"entity_id":["light.a","light.b"]},
+		"entity_id":["light.a","light.b"]}}}`))
+
+	assert.Equal(t, "call_service", ev.Type, "the event type survives a payload we cannot model")
+}
+
+func TestParseEventMarksEntityCreation(t *testing.T) {
+	ev := parseEvent([]byte(`{"type":"event","event":{"event_type":"state_changed","data":{
+		"entity_id":"light.new",
+		"old_state":null,
+		"new_state":{"entity_id":"light.new","state":"on"}}}}`))
+
+	assert.True(t, ev.Created)
+	assert.False(t, ev.Deleted)
+	assert.Equal(t, "on", ev.To.State)
+	assert.Empty(t, ev.From.State)
+}
+
+func TestParseEventMarksEntityDeletion(t *testing.T) {
+	ev := parseEvent([]byte(`{"type":"event","event":{"event_type":"state_changed","data":{
+		"entity_id":"light.gone",
+		"old_state":{"entity_id":"light.gone","state":"on"},
+		"new_state":null}}}`))
+
+	assert.True(t, ev.Deleted)
+	assert.False(t, ev.Created)
+	assert.Equal(t, "on", ev.From.State)
+}
+
+// A deleted entity did not transition to anything, so an automation watching
+// it must not fire with an empty state that reads like a real one.
+func TestStateChangedIgnoresDeletion(t *testing.T) {
+	trig := StateChanged("light.gone")
+
+	ev := parseEvent([]byte(`{"type":"event","event":{"event_type":"state_changed","data":{
+		"entity_id":"light.gone",
+		"old_state":{"entity_id":"light.gone","state":"on"},
+		"new_state":null}}}`))
+
+	assert.False(t, trig.Matches(ev))
+}
+
+func TestStateChangedFiresOnCreation(t *testing.T) {
+	trig := StateChanged("light.new").To("on")
+
+	ev := parseEvent([]byte(`{"type":"event","event":{"event_type":"state_changed","data":{
+		"entity_id":"light.new",
+		"old_state":null,
+		"new_state":{"entity_id":"light.new","state":"on"}}}}`))
+
+	assert.True(t, trig.Matches(ev), "an entity appearing in the state it is watched for is a real transition")
+}
