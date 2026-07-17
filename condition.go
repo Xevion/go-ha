@@ -2,15 +2,24 @@ package ha
 
 import (
 	"context"
-
-	"github.com/Xevion/go-ha/internal"
+	"time"
 )
+
+// Clock is the time source conditions read.
+//
+// It is declared here rather than reusing the internal one so that callers
+// outside this module can build an EvalContext: a condition they cannot
+// construct is a condition they cannot test, and testable automations are the
+// point of taking the clock as a parameter at all.
+type Clock interface {
+	Now() time.Time
+}
 
 // EvalContext is what a condition is allowed to read. Everything time or state
 // dependent arrives through here rather than being reached for directly, which
 // is what makes conditions testable without a Home Assistant.
 type EvalContext struct {
-	Clock internal.Clock
+	Clock Clock
 	State StateReader
 
 	// Event is the event that fired the automation. It is the zero value when a
