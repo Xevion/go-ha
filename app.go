@@ -1,6 +1,7 @@
 package ha
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -53,6 +54,11 @@ type App struct {
 	// an automation with several triggers registers once per trigger. Shutdown
 	// waits on these so a run in flight finishes its service calls.
 	runners map[*runner]struct{}
+
+	// rescheduled wakes the schedule loop when a dynamic trigger's time moves.
+	// A refreshed sun time can be earlier than the one the loop is sleeping
+	// on, and it would otherwise wake too late to fire it.
+	rescheduled chan struct{}
 
 	// loops tracks the schedule and interval goroutines. They admit runs of
 	// their own, so shutdown has to join them before waiting on any runner: a
@@ -170,6 +176,7 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 		eventListeners:  map[string][]*EventListener{},
 		automations:     map[string][]binding{},
 		runners:         map[*runner]struct{}{},
+		rescheduled:     make(chan struct{}, 1),
 	}
 
 	// Subscribing before connecting, so the replay that runs on every
@@ -191,6 +198,30 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 	return app, nil
 }
 
+// refreshSunSchedules re-derives sun-backed schedules when Home Assistant
+// republishes their times, which it does as each solar event passes.
+func (app *App) refreshSunSchedules(raw []byte) {
+	if !bytesMentionSunEntity(raw) {
+		return
+	}
+	if app.schedules.refresh(app.clock.Now()) == 0 {
+		return
+	}
+
+	// Non-blocking: the loop only needs to know something moved, and a second
+	// notification while one is already pending would tell it nothing new.
+	select {
+	case app.rescheduled <- struct{}{}:
+	default:
+	}
+}
+
+// bytesMentionSunEntity is a cheap reject before decoding. Every state_changed
+// event reaches here, and almost none of them are the sun.
+func bytesMentionSunEntity(raw []byte) bool {
+	return bytes.Contains(raw, []byte(SunEntityID))
+}
+
 // onEvent dispatches an event to the automations waiting on it. Like the
 // state_changed path, it holds off until Start: an automation must not fire
 // before the app it belongs to is running.
@@ -205,6 +236,7 @@ func (app *App) onEvent(msg connect.Message) {
 // the listeners watching the entity.
 func (app *App) onStateChanged(msg connect.Message) {
 	app.state.applyEvent(msg.Raw)
+	app.refreshSunSchedules(msg.Raw)
 
 	// Before Start the cache is still worth maintaining, but the startup pass
 	// has not run yet and owns which listeners it marks completed.

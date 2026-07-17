@@ -117,3 +117,43 @@ func (s *scheduler) runDue(now time.Time) int {
 func (s *scheduler) len() int {
 	return s.queue.Len()
 }
+
+// dynamicTrigger is implemented by triggers whose times move on their own,
+// rather than only advancing when the trigger fires. A sun trigger reads its
+// times from Home Assistant, which republishes them daily.
+type dynamicTrigger interface {
+	dynamic() bool
+}
+
+// refresh re-derives the fire time of every dynamic entry and reports how many
+// moved.
+//
+// Without this a sun trigger could never track Home Assistant. It is asked for
+// its next time immediately after firing, microseconds later, and the updated
+// attribute has not crossed the network yet, so it would answer from the value
+// that just expired every single time.
+func (s *scheduler) refresh(now time.Time) int {
+	if s.queue.Empty() {
+		return 0
+	}
+
+	items, err := s.queue.Get(s.queue.Len())
+	if err != nil {
+		return 0
+	}
+
+	moved := 0
+	for _, item := range items {
+		entry := item.(Item).Value.(*scheduledEntry)
+
+		if dyn, ok := entry.trigger.(dynamicTrigger); ok && dyn.dynamic() {
+			if next := entry.trigger.NextTime(now); next != nil && !next.Equal(entry.fireAt) {
+				entry.fireAt = *next
+				moved++
+			}
+		}
+		s.push(entry)
+	}
+
+	return moved
+}

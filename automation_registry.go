@@ -39,6 +39,13 @@ func (a schedulerAdapter) Hash() uint64 {
 
 func (a schedulerAdapter) String() string { return fmt.Sprint(a.trigger) }
 
+// dynamic forwards the wrapped trigger's answer, so the scheduler can tell
+// which entries need re-deriving when their source changes.
+func (a schedulerAdapter) dynamic() bool {
+	dyn, ok := a.trigger.(dynamicTrigger)
+	return ok && dyn.dynamic()
+}
+
 // RegisterAutomations wires automations to their triggers. Schedule triggers go
 // onto the timing heap and event triggers onto the dispatch map, so an
 // automation holding both is driven from both.
@@ -91,6 +98,12 @@ func (app *App) RegisterAutomations(automations ...Automation) error {
 }
 
 func (app *App) scheduleAutomation(a Automation, trig ScheduleTrigger) {
+	// A trigger declared before any App exists has nothing to read from until
+	// it joins one. Sun triggers derive their times from an entity.
+	if b, ok := trig.(interface{ bind(StateReader) }); ok {
+		b.bind(app.state)
+	}
+
 	app.schedules.add(schedulerAdapter{trigger: trig}, func() {
 		ec := EvalContext{Clock: app.clock, State: app.state}
 		deps := Run{Services: app.service, State: app.state, Trigger: trig}

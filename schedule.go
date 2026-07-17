@@ -216,11 +216,18 @@ func runSchedules(a *App) {
 
 		slog.Info("Next schedule", "start_time", entry.fireAt)
 
-		// Wait until the next schedule time or context cancellation
+		// Wait until the next schedule time, a reschedule, or cancellation.
+		timer := time.NewTimer(time.Until(entry.fireAt))
 		select {
-		case <-time.After(time.Until(entry.fireAt)):
+		case <-timer.C:
 			// Time elapsed, the next pass runs it
+		case <-a.rescheduled:
+			// A dynamic trigger moved. The new time can be earlier than the
+			// one being slept on, so the queue is re-read rather than waited
+			// out.
+			timer.Stop()
 		case <-a.ctx.Done():
+			timer.Stop()
 			slog.Info("Schedules goroutine shutting down")
 			return
 		}
