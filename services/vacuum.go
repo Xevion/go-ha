@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type Vacuum struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // Tell the vacuum cleaner to do a spot clean-up. Takes an entityId.

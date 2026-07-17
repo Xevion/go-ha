@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type Timer struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // See https://www.home-assistant.io/integrations/timer/#action-timerstart

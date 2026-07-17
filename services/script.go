@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type Script struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // Reload a script that was created in the HA UI.

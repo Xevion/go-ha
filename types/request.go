@@ -31,3 +31,12 @@ func (r *SetTemperatureRequest) ToJSON() map[string]any {
 	}
 	return m
 }
+
+// Request is a message the client stamps with a connection-scoped id before
+// writing it.
+//
+// It lives here rather than beside the client so that a package building
+// requests does not have to import the transport to describe one.
+type Request interface {
+	SetID(id int64)
+}

@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type Event struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // Fire an event

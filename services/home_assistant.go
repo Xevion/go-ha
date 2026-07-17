@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type HomeAssistant struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // TurnOn a Home Assistant entity. Takes an entityId and an optional map that is translated into service_data.

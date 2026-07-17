@@ -36,13 +36,6 @@ func (s Subscription) request() mapRequest {
 	return req
 }
 
-// Request is a message the client stamps with a connection-scoped id before
-// sending. Ids are allocated per client rather than per process, so two Apps in
-// one binary no longer share a counter.
-type Request interface {
-	SetID(id int64)
-}
-
 // mapRequest is an ad-hoc request built inline, for protocol messages that have
 // no dedicated type.
 type mapRequest map[string]any

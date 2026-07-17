@@ -1,12 +1,11 @@
 package services
 
 import (
-	"github.com/Xevion/go-ha/internal/connect"
 	"github.com/Xevion/go-ha/types"
 )
 
 type Notify struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // Notify sends a notification. Takes a types.NotifyRequest.

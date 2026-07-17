@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type ZWaveJS struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // ZWaveJS bulk_set_partial_config_parameters service.

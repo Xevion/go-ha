@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type Switch struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // TurnOn turns on a switch entity.

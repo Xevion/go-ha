@@ -1,12 +1,11 @@
 package services
 
 import (
-	"github.com/Xevion/go-ha/internal/connect"
 	"github.com/Xevion/go-ha/types"
 )
 
 type Climate struct {
-	conn *connect.Client
+	conn Sender
 }
 
 func (c Climate) SetFanMode(entityId string, fanMode string) error {

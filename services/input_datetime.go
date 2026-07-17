@@ -3,12 +3,10 @@ package services
 import (
 	"fmt"
 	"time"
-
-	"github.com/Xevion/go-ha/internal/connect"
 )
 
 type InputDatetime struct {
-	conn *connect.Client
+	conn Sender
 }
 
 func (ib InputDatetime) Set(entityId string, value time.Time) error {

@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type AdaptiveLighting struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // Set manual control for an adaptive lighting entity.

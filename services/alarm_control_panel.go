@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type AlarmControlPanel struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // Send the alarm the command for arm away. Takes an entityId and an optional map that is translated into service_data.

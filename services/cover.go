@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type Cover struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // Close all or specified cover. Takes an entityId.

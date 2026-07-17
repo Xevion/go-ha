@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type InputButton struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // Press presses an input button entity.

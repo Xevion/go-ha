@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type InputBoolean struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // TurnOn turns on an input boolean entity.

@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type Scene struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // Apply a scene. Takes map that is translated into service_data.

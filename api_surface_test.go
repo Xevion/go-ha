@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	ha "github.com/Xevion/go-ha"
+	"github.com/Xevion/go-ha/services"
+	"github.com/Xevion/go-ha/types"
 )
 
 // fixedClock is what a user outside this module would write. It exists to prove
@@ -64,3 +66,32 @@ func TestAutomationBuildsFromExportedAPIOnly(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "porch light", a.Name())
 }
+
+// The point of promoting the services package: a user can name a service type
+// and write helpers over it. While it lived under internal/ the call worked but
+// the type could not be spelled, so this function was impossible to declare.
+func dimTo(light *services.Light, entityID string, brightness int) error {
+	return light.TurnOn(entityID, map[string]any{"brightness": brightness})
+}
+
+func TestServiceTypesAreNameableFromOutside(t *testing.T) {
+	var sent []types.Request
+	light := services.BuildService[services.Light](senderFunc(func(r types.Request) error {
+		sent = append(sent, r)
+		return nil
+	}))
+
+	require.NoError(t, dimTo(light, "light.kitchen", 128))
+	require.Len(t, sent, 1)
+
+	req, ok := sent[0].(*services.BaseServiceRequest)
+	require.True(t, ok)
+	assert.Equal(t, "light", req.Domain)
+	assert.Equal(t, "turn_on", req.Service)
+	assert.Equal(t, "light.kitchen", req.Target.EntityId)
+	assert.Equal(t, 128, req.ServiceData["brightness"])
+}
+
+type senderFunc func(types.Request) error
+
+func (f senderFunc) Send(r types.Request) error { return f(r) }

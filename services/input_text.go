@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type InputText struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // Set sets the value of an input text entity.

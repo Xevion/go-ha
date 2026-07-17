@@ -2,7 +2,7 @@ package ha
 
 import (
 	"github.com/Xevion/go-ha/internal/connect"
-	"github.com/Xevion/go-ha/internal/services"
+	"github.com/Xevion/go-ha/services"
 )
 
 type Service struct {

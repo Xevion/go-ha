@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type Light struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // TurnOn a light entity. Takes an entityId and an optional map that is translated into service_data.

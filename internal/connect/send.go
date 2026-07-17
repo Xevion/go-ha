@@ -5,18 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+
+	"github.com/Xevion/go-ha/types"
 )
 
 // Send writes a request and returns as soon as it is on the wire. The result
 // Home Assistant sends back is still correlated, but only to log a failure:
 // without it a call_service against a missing entity fails in total silence.
-func (c *Client) Send(req Request) error {
+func (c *Client) Send(req types.Request) error {
 	_, err := c.dispatch(req, nil)
 	return err
 }
 
 // Call writes a request and waits for Home Assistant to answer it.
-func (c *Client) Call(ctx context.Context, req Request) (Message, error) {
+func (c *Client) Call(ctx context.Context, req types.Request) (Message, error) {
 	// Buffered so delivery never blocks the reader, even if this caller has
 	// already given up and stopped waiting.
 	answer := make(chan Message, 1)
@@ -45,7 +47,7 @@ func (c *Client) Call(ctx context.Context, req Request) (Message, error) {
 // id atomically is not enough on its own: two goroutines could take 5 and 6 and
 // then reach the socket in the opposite order, at which point 5 is refused with
 // "Identifier values have to increase" and that caller never gets an answer.
-func (c *Client) dispatch(req Request, onAnswer func(Message)) (int64, error) {
+func (c *Client) dispatch(req types.Request, onAnswer func(Message)) (int64, error) {
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
 

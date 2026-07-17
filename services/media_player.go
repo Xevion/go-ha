@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type MediaPlayer struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // Send the media player the command to clear players playlist. Takes an entityId.

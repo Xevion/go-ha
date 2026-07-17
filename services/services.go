@@ -1,8 +1,13 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
+import "github.com/Xevion/go-ha/types"
+
+// Sender delivers a service call to Home Assistant. The client satisfies it;
+// it is an interface here so that building a service does not require naming
+// the transport.
+type Sender interface {
+	Send(req types.Request) error
+}
 
 func BuildService[
 	T AdaptiveLighting |
@@ -28,7 +33,7 @@ func BuildService[
 		Timer |
 		Vacuum |
 		ZWaveJS,
-](conn *connect.Client) *T {
+](conn Sender) *T {
 	return &T{conn: conn}
 }
 

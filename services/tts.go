@@ -1,11 +1,7 @@
 package services
 
-import (
-	"github.com/Xevion/go-ha/internal/connect"
-)
-
 type TTS struct {
-	conn *connect.Client
+	conn Sender
 }
 
 // Remove all text-to-speech cache files and RAM cache.
