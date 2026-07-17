@@ -12,9 +12,3 @@ func (ib Number) SetValue(entityId string, value float32) error {
 
 	return ib.conn.Send(&req)
 }
-
-func (ib Number) MustSetValue(entityId string, value float32) {
-	if err := ib.SetValue(entityId, value); err != nil {
-		panic(err)
-	}
-}
