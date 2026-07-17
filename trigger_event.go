@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 )
 
 const eventStateChanged = "state_changed"
@@ -14,6 +15,7 @@ type StateChangeTrigger struct {
 	entityIDs []string
 	from      string
 	to        string
+	hold      time.Duration
 }
 
 // StateChanged fires when any of the given entities changes state. With no
@@ -34,7 +36,28 @@ func (t StateChangeTrigger) To(state string) StateChangeTrigger {
 	return t
 }
 
+// For fires only once the entity has held the new state for d. A change away
+// from it before then cancels the pending run, matching Home Assistant's
+// trigger `for:`.
+func (t StateChangeTrigger) For(d time.Duration) StateChangeTrigger {
+	t.hold = d
+	return t
+}
+
 func (t StateChangeTrigger) trigger() {}
+
+// holdFor reports how long the state must persist before firing.
+func (t StateChangeTrigger) holdFor() time.Duration { return t.hold }
+
+// concerns reports whether the event is about an entity this trigger watches,
+// whether or not it matches. A change away from the awaited state has to
+// cancel the wait, and only this can tell that the event was relevant at all.
+func (t StateChangeTrigger) concerns(ev Event) bool {
+	if ev.Type != eventStateChanged {
+		return false
+	}
+	return len(t.entityIDs) == 0 || slices.Contains(t.entityIDs, ev.EntityID)
+}
 
 func (t StateChangeTrigger) Subscriptions() []Subscription {
 	return []Subscription{{EventType: eventStateChanged}}

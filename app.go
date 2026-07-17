@@ -285,6 +285,13 @@ func (app *App) Close() error {
 	for r := range app.runners {
 		runners = append(runners, r)
 	}
+	// Same reasoning as the listener timers: a trigger waiting out a For
+	// duration would otherwise fire into a closed connection.
+	for _, bindings := range app.automations {
+		for _, b := range bindings {
+			b.pending.stop()
+		}
+	}
 	app.listenersMu.RUnlock()
 
 	// The schedule and interval loops admit runs of their own, so they have to

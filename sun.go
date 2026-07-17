@@ -1,6 +1,7 @@
 package ha
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -125,4 +126,27 @@ func (t *sunTrigger) String() string {
 		return t.event.String()
 	}
 	return fmt.Sprintf("%s%+s", t.event, t.offset)
+}
+
+type sunUpCondition struct{ up bool }
+
+// SunIsUp holds while Home Assistant reports the sun above the horizon.
+func SunIsUp() Condition { return sunUpCondition{up: true} }
+
+// SunIsDown holds while Home Assistant reports the sun below the horizon.
+func SunIsDown() Condition { return sunUpCondition{up: false} }
+
+func (c sunUpCondition) Eval(_ context.Context, ec EvalContext) (bool, error) {
+	sun, err := ec.State.Get(SunEntityID)
+	if err != nil {
+		return false, fmt.Errorf("reading %s: %w", SunEntityID, err)
+	}
+	return (sun.State == "above_horizon") == c.up, nil
+}
+
+func (c sunUpCondition) String() string {
+	if c.up {
+		return "sun is up"
+	}
+	return "sun is down"
 }

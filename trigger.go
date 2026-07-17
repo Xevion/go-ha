@@ -102,3 +102,25 @@ func Cron(expression string) ScheduleTrigger {
 	}
 	return scheduleTrigger{inner: inner, label: "cron(" + expression + ")"}
 }
+
+// startupTrigger fires once, when the app starts.
+type startupTrigger struct{ fired bool }
+
+// AtStartup fires once when Start is called, for automations that need to act
+// on the state of the world as they find it rather than waiting for it to
+// change.
+func AtStartup() ScheduleTrigger { return &startupTrigger{} }
+
+func (t *startupTrigger) trigger() {}
+
+// NextTime reports the given instant the first time it is asked and never
+// again, which fires it on the scheduler's first pass and then retires it.
+func (t *startupTrigger) NextTime(after time.Time) (time.Time, bool) {
+	if t.fired {
+		return time.Time{}, false
+	}
+	t.fired = true
+	return after, true
+}
+
+func (t *startupTrigger) String() string { return "startup" }

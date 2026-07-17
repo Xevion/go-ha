@@ -15,6 +15,11 @@ import (
 type binding struct {
 	automation Automation
 	trigger    EventTrigger
+
+	// pending holds the waits of a trigger with a For duration. It is
+	// allocated per registration rather than living on the trigger, which is
+	// copied by every builder stage.
+	pending *pendingRuns
 }
 
 // schedulerAdapter presents a public ScheduleTrigger to the internal scheduler,
@@ -116,14 +121,14 @@ func (app *App) scheduleAutomation(a Automation, trig ScheduleTrigger) {
 
 func (app *App) subscribeAutomation(a Automation, trig EventTrigger) error {
 	var fresh []string
+	b := binding{automation: a, trigger: trig, pending: newPendingRuns()}
 
 	app.listenersMu.Lock()
 	for _, sub := range trig.Subscriptions() {
 		if _, seen := app.automations[sub.EventType]; !seen {
 			fresh = append(fresh, sub.EventType)
 		}
-		app.automations[sub.EventType] = append(app.automations[sub.EventType],
-			binding{automation: a, trigger: trig})
+		app.automations[sub.EventType] = append(app.automations[sub.EventType], b)
 	}
 	app.listenersMu.Unlock()
 
@@ -165,11 +170,26 @@ func (app *App) dispatchEvent(raw []byte) {
 	ec := EvalContext{Clock: app.clock, State: app.state, Event: ev}
 
 	for _, b := range bindings {
-		if !b.trigger.Matches(ev) {
+		matched := b.trigger.Matches(ev)
+		deps := Run{Services: app.service, State: app.state, Event: ev, Trigger: b.trigger}
+
+		// A trigger with a For duration waits the state out instead of firing
+		// on the transition, and abandons the wait if the state moves away.
+		if delayed, ok := b.trigger.(delayedTrigger); ok && delayed.holdFor() > 0 {
+			switch {
+			case matched:
+				b.pending.arm(ev.EntityID, delayed.holdFor(), func() {
+					b.automation.fire(app.ctx, ec, deps, ev.EntityID)
+				})
+			case delayed.concerns(ev):
+				b.pending.disarm(ev.EntityID)
+			}
 			continue
 		}
 
-		deps := Run{Services: app.service, State: app.state, Event: ev, Trigger: b.trigger}
+		if !matched {
+			continue
+		}
 
 		// Keyed by entity, so one automation watching many entities keeps a
 		// separate throttle window and run slot for each.
