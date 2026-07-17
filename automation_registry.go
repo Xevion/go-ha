@@ -65,11 +65,19 @@ func (app *App) RegisterAutomations(automations ...Automation) error {
 		app.listenersMu.Unlock()
 
 		for _, t := range a.triggers {
-			switch trig := t.(type) {
-			case ScheduleTrigger:
-				app.scheduleAutomation(a, trig)
-			case EventTrigger:
-				if err := app.subscribeAutomation(a, trig); err != nil {
+			schedule, isSchedule := t.(ScheduleTrigger)
+			event, isEvent := t.(EventTrigger)
+
+			switch {
+			case isSchedule && isEvent:
+				// A type switch would silently pick one and drop the other
+				// half of the trigger, which is worse than refusing it.
+				errs = append(errs, fmt.Errorf("%w %q: trigger %T implements both trigger families, which is ambiguous",
+					ErrInvalidAutomation, a.name, t))
+			case isSchedule:
+				app.scheduleAutomation(a, schedule)
+			case isEvent:
+				if err := app.subscribeAutomation(a, event); err != nil {
 					errs = append(errs, err)
 				}
 			default:
@@ -118,7 +126,7 @@ func (app *App) subscribeAutomation(a Automation, trig EventTrigger) error {
 		}
 		if err := app.client.Subscribe(
 			connect.Subscription{EventType: eventType},
-			func(msg connect.Message) { app.dispatchEvent(msg.Raw) },
+			app.onEvent,
 		); err != nil {
 			errs = append(errs, fmt.Errorf("subscribing to %s: %w", eventType, err))
 		}

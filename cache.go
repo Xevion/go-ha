@@ -61,6 +61,15 @@ func (c *entityCache) finishSeed(list []EntityState) {
 // Events are handled by a pool of workers, so two updates to one entity can
 // arrive here in either order; without this the loser of that race would be
 // left in the cache permanently.
+// abandonSeed closes a window whose snapshot never arrived. Left open, the
+// touched set keeps growing against a snapshot that is not coming.
+func (c *entityCache) abandonSeed() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.touched = nil
+	c.pending = false
+}
+
 func (c *entityCache) apply(es EntityState) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

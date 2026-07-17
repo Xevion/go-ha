@@ -191,6 +191,16 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 	return app, nil
 }
 
+// onEvent dispatches an event to the automations waiting on it. Like the
+// state_changed path, it holds off until Start: an automation must not fire
+// before the app it belongs to is running.
+func (app *App) onEvent(msg connect.Message) {
+	if !app.started.Load() {
+		return
+	}
+	app.dispatchEvent(msg.Raw)
+}
+
 // onStateChanged keeps the cache current and, once the app has started, runs
 // the listeners watching the entity.
 func (app *App) onStateChanged(msg connect.Message) {

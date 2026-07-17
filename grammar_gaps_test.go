@@ -3,6 +3,7 @@ package ha
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -133,4 +134,70 @@ func TestStateChangedFiresOnCreation(t *testing.T) {
 		"new_state":{"entity_id":"light.new","state":"on"}}}}`))
 
 	assert.True(t, trig.Matches(ev), "an entity appearing in the state it is watched for is a real transition")
+}
+
+// Nothing is before midnight. Left to the start/end comparison, an empty
+// window reads as a range wrapping the whole day, which is its exact opposite.
+func TestBeforeMidnightNeverHolds(t *testing.T) {
+	c := BeforeTime(TimeOfDay(0, 0))
+
+	for _, hour := range []int{0, 6, 12, 23} {
+		assert.False(t, evalAt(t, c, hour, 0), "at %02d:00", hour)
+	}
+}
+
+func TestAfterMidnightAlwaysHolds(t *testing.T) {
+	c := AfterTime(TimeOfDay(0, 0))
+
+	for _, hour := range []int{0, 6, 12, 23} {
+		assert.True(t, evalAt(t, c, hour, 0), "at %02d:00", hour)
+	}
+}
+
+func TestEmptyDateConditionsFailTheBuild(t *testing.T) {
+	for name, cond := range map[string]Condition{
+		"OnDates":    OnDates(),
+		"OnWeekdays": OnWeekdays(),
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := NewAutomation("a").On(Daily(TimeOfDay(9, 0))).When(cond).Do(noAction).Build()
+			assert.ErrorIs(t, err, ErrInvalidArgs,
+				"a condition that can never hold is a mistake, not a configuration")
+		})
+	}
+}
+
+// bothFamilies implements the schedule and event contracts at once. A type
+// switch would silently pick one and drop the other half.
+type bothFamilies struct{}
+
+func (bothFamilies) trigger()                             {}
+func (bothFamilies) NextTime(time.Time) (time.Time, bool) { return time.Time{}, false }
+func (bothFamilies) Subscriptions() []Subscription        { return nil }
+func (bothFamilies) Matches(Event) bool                   { return false }
+
+func TestRegisterRejectsATriggerInBothFamilies(t *testing.T) {
+	app := testApp()
+
+	a := NewAutomation("ambiguous").On(bothFamilies{}).Do(noAction).MustBuild()
+	err := app.RegisterAutomations(a)
+
+	assert.ErrorIs(t, err, ErrInvalidAutomation)
+	assert.Contains(t, err.Error(), "both trigger families")
+}
+
+func TestFailedSeedClosesItsWindow(t *testing.T) {
+	c := newEntityCache()
+
+	c.beginSeed()
+	c.apply(entity("light.kitchen", "on"))
+	c.abandonSeed()
+
+	// With the window still open the touched set would keep growing against a
+	// snapshot that is never coming.
+	c.beginSeed()
+	c.finishSeed([]EntityState{entity("light.kitchen", "off")})
+
+	got, _ := c.get("light.kitchen")
+	assert.Equal(t, "off", got.State, "the abandoned window must not protect stale state")
 }

@@ -51,10 +51,22 @@ func AfterTime(t ClockTime) Condition {
 	return timeBetweenCondition{start: t, end: TimeOfDay(0, 0)}
 }
 
-// BeforeTime holds from midnight until the given time.
+// BeforeTime holds from midnight until the given time. Nothing is before
+// midnight, so BeforeTime(TimeOfDay(0, 0)) never holds.
 func BeforeTime(t ClockTime) Condition {
+	if t.err == nil && t.minuteOfDay() == 0 {
+		return neverCondition{}
+	}
 	return timeBetweenCondition{start: TimeOfDay(0, 0), end: t}
 }
+
+// neverCondition is an empty window. Left to the start/end comparison it would
+// read as a range wrapping the whole day, which is its exact opposite.
+type neverCondition struct{}
+
+func (neverCondition) Eval(context.Context, EvalContext) (bool, error) { return false, nil }
+
+func (neverCondition) String() string { return "never" }
 
 // Eval compares wall-clock minutes rather than building absolute instants.
 // A daylight saving jump deletes an hour from the local clock: asking Go for a

@@ -96,10 +96,12 @@ func (s *state) seed() error {
 
 	resp, err := s.httpClient.GetStates()
 	if err != nil {
+		s.cache.abandonSeed()
 		return err
 	}
 	var list []EntityState
 	if err := json.Unmarshal(resp, &list); err != nil {
+		s.cache.abandonSeed()
 		return fmt.Errorf("decoding state snapshot: %w", err)
 	}
 

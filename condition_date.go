@@ -25,6 +25,13 @@ func (c onDatesCondition) Eval(_ context.Context, ec EvalContext) (bool, error) 
 	return false, nil
 }
 
+func (c onDatesCondition) validate() error {
+	if len(c.dates) == 0 {
+		return fmt.Errorf("%w: OnDates needs at least one date", ErrInvalidArgs)
+	}
+	return nil
+}
+
 func (c onDatesCondition) String() string {
 	return fmt.Sprintf("on %d date(s)", len(c.dates))
 }
@@ -61,6 +68,13 @@ func OnWeekdays(days ...time.Weekday) Condition {
 
 func (c onWeekdaysCondition) Eval(_ context.Context, ec EvalContext) (bool, error) {
 	return slices.Contains(c.days, ec.Clock.Now().Weekday()), nil
+}
+
+func (c onWeekdaysCondition) validate() error {
+	if len(c.days) == 0 {
+		return fmt.Errorf("%w: OnWeekdays needs at least one day", ErrInvalidArgs)
+	}
+	return nil
 }
 
 func (c onWeekdaysCondition) String() string {
