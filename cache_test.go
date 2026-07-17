@@ -95,7 +95,9 @@ func TestCacheListsEntities(t *testing.T) {
 	c.beginSeed()
 	c.finishSeed([]EntityState{entity("light.kitchen", "on"), entity("light.hall", "off")})
 
-	assert.Len(t, c.list(), 2)
+	entities, seeded := c.snapshot()
+	require.True(t, seeded)
+	assert.Len(t, entities, 2)
 }
 
 // Events are dispatched by a pool of workers, so two updates to one entity can

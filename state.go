@@ -123,10 +123,11 @@ func (s *state) applyEvent(raw []byte) {
 }
 
 func (s *state) Get(entityId string) (EntityState, error) {
-	if es, ok := s.cache.get(entityId); ok {
+	es, found, seeded := s.cache.lookup(entityId)
+	if found {
 		return es, nil
 	}
-	if s.cache.ready() {
+	if seeded {
 		return EntityState{}, fmt.Errorf("%w: %s", internal.ErrEntityNotFound, entityId)
 	}
 
@@ -134,7 +135,6 @@ func (s *state) Get(entityId string) (EntityState, error) {
 	if err != nil {
 		return EntityState{}, err
 	}
-	es := EntityState{}
 	err = json.Unmarshal(resp, &es)
 	return es, err
 }
@@ -142,8 +142,8 @@ func (s *state) Get(entityId string) (EntityState, error) {
 // ListEntities returns a list of all entities in Home Assistant.
 // See REST documentation for more details: https://developers.home-assistant.io/docs/api/rest/#actions
 func (s *state) ListEntities() ([]EntityState, error) {
-	if s.cache.ready() {
-		return s.cache.list(), nil
+	if entities, seeded := s.cache.snapshot(); seeded {
+		return entities, nil
 	}
 
 	resp, err := s.httpClient.GetStates()

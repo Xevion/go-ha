@@ -89,10 +89,33 @@ func (c *entityCache) remove(entityId string) {
 }
 
 func (c *entityCache) get(entityId string) (EntityState, bool) {
+	es, found, _ := c.lookup(entityId)
+	return es, found
+}
+
+// lookup reports the entity, whether it was found, and whether the cache is
+// authoritative. All three come from one acquisition: asking separately lets a
+// seed land in between, so a miss taken before it is judged against a
+// readiness taken after, and an entity that exists is reported missing.
+func (c *entityCache) lookup(entityId string) (es EntityState, found, seeded bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	es, ok := c.entities[entityId]
-	return es, ok
+	es, found = c.entities[entityId]
+	return es, found, c.seeded
+}
+
+// snapshot returns every entity and whether the cache is authoritative.
+func (c *entityCache) snapshot() ([]EntityState, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if !c.seeded {
+		return nil, false
+	}
+	out := make([]EntityState, 0, len(c.entities))
+	for _, es := range c.entities {
+		out = append(out, es)
+	}
+	return out, true
 }
 
 // ready reports whether a snapshot has landed. Until one has, the cache cannot
@@ -101,14 +124,4 @@ func (c *entityCache) ready() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.seeded
-}
-
-func (c *entityCache) list() []EntityState {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	out := make([]EntityState, 0, len(c.entities))
-	for _, es := range c.entities {
-		out = append(out, es)
-	}
-	return out
 }
