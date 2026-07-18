@@ -23,8 +23,8 @@ func (s Script) Toggle(entityId ScriptID) error {
 }
 
 // TurnOff a script that was created in the HA UI.
-func (s Script) TurnOff() error {
-	req := NewBaseServiceRequest("")
+func (s Script) TurnOff(entityId ScriptID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "script"
 	req.Service = "turn_off"
 

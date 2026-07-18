@@ -57,19 +57,25 @@ func (c *entityCache) finishSeed(list []EntityState) {
 	c.seeded = true
 }
 
-// apply folds an update in, unless it is older than what is already stored.
-// Events are handled by a pool of workers, so two updates to one entity can
-// arrive here in either order; without this the loser of that race would be
-// left in the cache permanently.
 // abandonSeed closes a window whose snapshot never arrived. Left open, the
 // touched set keeps growing against a snapshot that is not coming.
+//
+// It also gives up the cache's authority. Whatever is held now predates the
+// outage that prompted the reseed, so an entity missing from it is one this
+// cache cannot speak for: reads fall back to Home Assistant until a snapshot
+// lands, rather than confidently reporting it does not exist.
 func (c *entityCache) abandonSeed() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.touched = nil
 	c.pending = false
+	c.seeded = false
 }
 
+// apply folds an update in, unless it is older than what is already stored.
+// Events are handled by a pool of workers, so two updates to one entity can
+// arrive here in either order; without this the loser of that race would be
+// left in the cache permanently.
 func (c *entityCache) apply(es EntityState) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

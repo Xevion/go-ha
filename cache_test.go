@@ -123,6 +123,25 @@ func TestApplyIgnoresAnUpdateOlderThanTheStoredOne(t *testing.T) {
 	assert.Equal(t, "on", got.State, "an update that overtook a newer one must not win")
 }
 
+// A reseed happens because the stream was down. If it fails, what is held
+// predates the outage, so the cache must stop answering "does not exist".
+func TestAbandonedSeedGivesUpAuthority(t *testing.T) {
+	c := newEntityCache()
+	c.beginSeed()
+	c.finishSeed([]EntityState{entity("light.kitchen", "on")})
+	require.True(t, c.ready())
+
+	c.beginSeed()
+	c.abandonSeed()
+
+	assert.False(t, c.ready(), "a failed reseed leaves stale state that cannot be trusted for absence")
+
+	// What it does hold is still worth serving.
+	got, ok := c.get("light.kitchen")
+	require.True(t, ok)
+	assert.Equal(t, "on", got.State)
+}
+
 func TestApplyAcceptsUpdatesWithoutTimestamps(t *testing.T) {
 	c := newEntityCache()
 	c.beginSeed()

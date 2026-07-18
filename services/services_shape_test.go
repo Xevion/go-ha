@@ -105,6 +105,25 @@ func TestCallReachesAnUnmodelledService(t *testing.T) {
 	assert.Equal(t, "fast", r.last.ServiceData["mode"])
 }
 
+// Zero degrees is an ordinary setpoint in Celsius. Treating it as "unset"
+// dropped it from the call and left the thermostat where it was.
+func TestSetTemperatureSendsAZeroSetpoint(t *testing.T) {
+	req := types.SetTemperatureRequest{Temperature: types.Ptr(float32(0))}
+
+	payload := req.ToJSON()
+	require.Contains(t, payload, "temperature")
+	assert.Equal(t, float32(0), payload["temperature"])
+}
+
+func TestSetTemperatureOmitsUnsetFields(t *testing.T) {
+	req := types.SetTemperatureRequest{Temperature: types.Ptr(float32(21))}
+
+	payload := req.ToJSON()
+	assert.NotContains(t, payload, "target_temp_high")
+	assert.NotContains(t, payload, "target_temp_low")
+	assert.NotContains(t, payload, "hvac_mode")
+}
+
 func TestCallWithoutATargetOmitsIt(t *testing.T) {
 	r := &recorder{}
 

@@ -37,8 +37,8 @@ func (t Timer) Pause(entityId TimerID) error {
 }
 
 // See https://www.home-assistant.io/integrations/timer/#action-timercancel
-func (t Timer) Cancel() error {
-	req := NewBaseServiceRequest("")
+func (t Timer) Cancel(entityId TimerID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "timer"
 	req.Service = "cancel"
 	return t.conn.Send(&req)
