@@ -33,8 +33,8 @@ func statusError(resp *resty.Response) error {
 }
 
 type HttpClient struct {
-	client      *resty.Client
-	baseRequest *resty.Request
+	client *resty.Client
+	token  string
 }
 
 func NewHttpClient(ctx context.Context, baseUrl *url.URL, token string) *HttpClient {
@@ -55,18 +55,20 @@ func NewHttpClient(ctx context.Context, baseUrl *url.URL, token string) *HttpCli
 		SetHeader("User-Agent", "go-ha/"+Version).
 		SetContext(ctx)
 
-	return &HttpClient{
-		client: client,
-		baseRequest: client.R().
-			SetContentType("application/json").
-			SetHeader("Accept", "application/json").
-			SetAuthToken(token),
-	}
+	return &HttpClient{client: client, token: token}
 }
 
 // getRequest returns a new request.
+//
+// Built from the client each time rather than cloned from a shared one:
+// cloning reads and writes the request it copies, so two goroutines issuing
+// requests at once, which is what a snapshot fetch racing a condition's read
+// is, corrupt each other's.
 func (c *HttpClient) getRequest() *resty.Request {
-	return c.baseRequest.Clone(c.client.Context())
+	return c.client.R().
+		SetContentType("application/json").
+		SetHeader("Accept", "application/json").
+		SetAuthToken(c.token)
 }
 
 func (c *HttpClient) GetState(entityId string) ([]byte, error) {
