@@ -125,7 +125,12 @@ func (t *sunTrigger) String() string {
 	if t.offset == 0 {
 		return t.event.String()
 	}
-	return fmt.Sprintf("%s%+s", t.event, t.offset)
+	// Duration renders its own minus sign but never a plus, and the + flag does
+	// nothing for a string verb.
+	if t.offset > 0 {
+		return fmt.Sprintf("%s+%s", t.event, t.offset)
+	}
+	return fmt.Sprintf("%s%s", t.event, t.offset)
 }
 
 type sunUpCondition struct{ up bool }

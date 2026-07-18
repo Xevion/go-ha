@@ -17,7 +17,17 @@ import (
 	"github.com/Xevion/go-ha/types"
 )
 
-var ErrInvalidArgs = errors.New("invalid arguments provided")
+var (
+	// ErrInvalidArgs reports a malformed NewAppRequest.
+	ErrInvalidArgs = errors.New("invalid arguments provided")
+
+	// ErrConnectionAbandoned reports that the client gave up re-establishing
+	// the connection, so Start returned without being asked to.
+	ErrConnectionAbandoned = errors.New("connection abandoned")
+
+	// ErrNotRunning reports Start called twice, or after Close.
+	ErrNotRunning = errors.New("app is not runnable")
+)
 
 type App struct {
 	ctx       context.Context
@@ -57,6 +67,10 @@ type App struct {
 	// their own, so shutdown has to join them before waiting on any runner: a
 	// WaitGroup may not be raised from zero while a Wait on it is in flight.
 	loops sync.WaitGroup
+
+	// starting guards Start against being entered twice, which would double the
+	// loops and race Close's wait on them.
+	starting atomic.Bool
 
 	// started gates listener dispatch. The state_changed subscription exists
 	// from construction so the cache stays current, but listeners must not run
@@ -247,7 +261,19 @@ func (app *App) Close() error {
 	return closeErr
 }
 
-func (app *App) Start() {
+// Start runs the app until its context is cancelled or the client abandons
+// reconnection. It returns the reason it stopped: nil for a clean shutdown,
+// ErrConnectionAbandoned when the connection could not be recovered.
+//
+// Calling it twice, or after Close, is a no-op returning ErrNotRunning.
+func (app *App) Start() error {
+	if !app.starting.CompareAndSwap(false, true) {
+		return ErrNotRunning
+	}
+	if app.ctx.Err() != nil {
+		return ErrNotRunning
+	}
+
 	app.registryMu.RLock()
 	eventTypes := len(app.automations)
 	app.registryMu.RUnlock()
@@ -259,9 +285,12 @@ func (app *App) Start() {
 		"event_types", eventTypes,
 	)
 
+	// Separate channels: a wake meant for the schedules loop would otherwise be
+	// consumed by the intervals loop, which has no dynamic triggers to re-read,
+	// and the schedule that actually moved would sleep through it.
 	app.loops.Add(2)
 	go func() { defer app.loops.Done(); app.schedules.run(app.ctx, app.rescheduled, "schedules") }()
-	go func() { defer app.loops.Done(); app.intervals.run(app.ctx, app.rescheduled, "intervals") }()
+	go func() { defer app.loops.Done(); app.intervals.run(app.ctx, nil, "intervals") }()
 
 	// Opening the gate last, so nothing fires before the loops are up.
 	app.started.Store(true)
@@ -269,6 +298,7 @@ func (app *App) Start() {
 	select {
 	case <-app.ctx.Done():
 		slog.Info("Context cancelled, stopping")
+		return nil
 	case <-app.client.Done():
 		// The client gave up reconnecting, so blocking on our own context
 		// would leave the app alive but permanently deaf. Cancelling also
@@ -276,6 +306,7 @@ func (app *App) Start() {
 		// firing callbacks whose service calls have nowhere to go.
 		slog.Error("Connection abandoned, stopping")
 		app.ctxCancel()
+		return ErrConnectionAbandoned
 	}
 }
 

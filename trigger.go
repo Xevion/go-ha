@@ -124,3 +124,12 @@ func (t *startupTrigger) NextTime(after time.Time) (time.Time, bool) {
 }
 
 func (t *startupTrigger) String() string { return "startup" }
+
+// EntityRef is anything that names an entity: a plain string, or one of the
+// domain-typed ids cmd/generate emits.
+//
+// The trigger and condition constructors are generic over it so generated
+// constants can be used directly. Service methods cannot be, since Go does not
+// allow type parameters on methods, which is why they take their domain's id
+// type exactly.
+type EntityRef interface{ ~string }

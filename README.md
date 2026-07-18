@@ -14,6 +14,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"time"
 
 	ha "github.com/Xevion/go-ha"
@@ -44,7 +45,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	app.Start()
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
 }
 ```
 
@@ -183,7 +186,7 @@ func TestHallLight(t *testing.T) {
 	defer app.Close()
 
 	require.NoError(t, app.RegisterAutomations(hallLight()))
-	go app.Start()
+	go func() { _ = app.Start() }()
 
 	server.ChangeState("binary_sensor.hall_motion", "on")
 

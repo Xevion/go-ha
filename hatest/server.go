@@ -305,11 +305,9 @@ func (s *Server) serveWebsocket(w http.ResponseWriter, r *http.Request) {
 	c := &connection{ws: ws, subs: map[int64]string{}}
 	ctx := r.Context()
 
-	if err := s.authenticate(ctx, c); err != nil {
-		_ = ws.Close(websocket.StatusNormalClosure, "auth failed")
-		return
-	}
-
+	// Registered before the handshake, not after. Close only shuts connections
+	// it knows about, and a handler still authenticating would otherwise be
+	// waited on while holding a socket nobody had closed.
 	s.mu.Lock()
 	s.conns[c] = struct{}{}
 	s.mu.Unlock()
@@ -318,8 +316,12 @@ func (s *Server) serveWebsocket(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		delete(s.conns, c)
 		s.mu.Unlock()
-		_ = ws.Close(websocket.StatusNormalClosure, "")
+		_ = ws.CloseNow()
 	}()
+
+	if err := s.authenticate(ctx, c); err != nil {
+		return
+	}
 
 	s.readLoop(ctx, c)
 }

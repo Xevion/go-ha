@@ -12,17 +12,17 @@ type stateIsCondition struct {
 }
 
 // StateIs holds while the entity's state is the given value.
-func StateIs(entityID, state string) Condition {
-	return stateIsCondition{entityID: entityID, states: []string{state}}
+func StateIs[T EntityRef](entityID T, state string) Condition {
+	return stateIsCondition{entityID: string(entityID), states: []string{state}}
 }
 
 // StateIsOneOf holds while the entity's state is any of the given values.
-func StateIsOneOf(entityID string, states ...string) Condition {
-	return stateIsCondition{entityID: entityID, states: states}
+func StateIsOneOf[T EntityRef](entityID T, states ...string) Condition {
+	return stateIsCondition{entityID: string(entityID), states: states}
 }
 
 // StateIsNot holds while the entity's state is anything but the given value.
-func StateIsNot(entityID, state string) Condition {
+func StateIsNot[T EntityRef](entityID T, state string) Condition {
 	return Not(StateIs(entityID, state))
 }
 

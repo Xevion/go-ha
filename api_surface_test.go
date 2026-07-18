@@ -121,3 +121,36 @@ func TestSharedBuilderPrefixIsExpressible(t *testing.T) {
 	assert.Equal(t, "porch", porch.Name())
 	assert.Equal(t, "hall", hall.Name())
 }
+
+// Stands in for what cmd/generate emits: constants typed by domain.
+var generatedLights = struct {
+	Kitchen services.LightID
+	Hall    services.LightID
+}{Kitchen: "light.kitchen", Hall: "light.hall"}
+
+// Generated constants have to be usable where entities are named, or a typed
+// id is a constant you cannot spend.
+func TestGeneratedConstantsWorkWithTriggersAndConditions(t *testing.T) {
+	a, err := ha.NewAutomation("kitchen").
+		On(ha.StateChanged(generatedLights.Kitchen, generatedLights.Hall).To("on")).
+		When(ha.StateIsNot(generatedLights.Hall, "unavailable")).
+		Do(func(_ context.Context, run ha.Run) error {
+			return run.Services.Light.TurnOn(generatedLights.Kitchen)
+		}).
+		Build()
+
+	require.NoError(t, err)
+	assert.Equal(t, "kitchen", a.Name())
+}
+
+// Plain strings still work, so the generic parameter costs nothing at call
+// sites that do not use generated constants.
+func TestPlainStringsStillWork(t *testing.T) {
+	_, err := ha.NewAutomation("plain").
+		On(ha.StateChanged("binary_sensor.motion").To("on")).
+		When(ha.StateIs("light.hall", "off")).
+		Do(func(context.Context, ha.Run) error { return nil }).
+		Build()
+
+	require.NoError(t, err)
+}

@@ -30,7 +30,9 @@ func main() {
 		log.Fatalf("registering automations: %v", err)
 	}
 
-	app.Start()
+	if err := app.Start(); err != nil {
+		log.Fatalf("stopped: %v", err)
+	}
 }
 
 // hallLight turns the hall light on when motion is seen after dark, and off

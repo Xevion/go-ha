@@ -20,8 +20,15 @@ type StateChangeTrigger struct {
 
 // StateChanged fires when any of the given entities changes state. With no
 // entities it fires on every state change, which is rarely what you want.
-func StateChanged(entityIDs ...string) StateChangeTrigger {
-	return StateChangeTrigger{entityIDs: entityIDs}
+//
+// It is generic over the id type so the domain-typed constants cmd/generate
+// emits can be passed directly, as well as plain strings.
+func StateChanged[T EntityRef](entityIDs ...T) StateChangeTrigger {
+	ids := make([]string, 0, len(entityIDs))
+	for _, id := range entityIDs {
+		ids = append(ids, string(id))
+	}
+	return StateChangeTrigger{entityIDs: ids}
 }
 
 // From narrows the trigger to transitions out of the given state.

@@ -62,3 +62,40 @@ func TestCloseWaitsOutScheduleTriggeredRuns(t *testing.T) {
 
 	assert.Zero(t, afterClose.Load(), "an automation ran after Close reported a clean shutdown")
 }
+
+func TestStartRefusesToRunTwice(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	clock := internal.RealClock{}
+	app := &App{
+		ctx: ctx, ctxCancel: cancel,
+		clock:       clock,
+		state:       stateWith(),
+		schedules:   newScheduler(clock),
+		intervals:   newScheduler(clock),
+		automations: map[string][]binding{},
+		runners:     map[*runner]struct{}{},
+		rescheduled: make(chan struct{}, 1),
+	}
+
+	// A second Start would add to loops again and race Close's wait on them.
+	require.True(t, app.starting.CompareAndSwap(false, true))
+	assert.ErrorIs(t, app.Start(), ErrNotRunning)
+}
+
+func TestStartRefusesAfterClose(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	clock := internal.RealClock{}
+	app := &App{
+		ctx: ctx, ctxCancel: cancel,
+		clock:       clock,
+		state:       stateWith(),
+		schedules:   newScheduler(clock),
+		intervals:   newScheduler(clock),
+		automations: map[string][]binding{},
+		runners:     map[*runner]struct{}{},
+		rescheduled: make(chan struct{}, 1),
+	}
+	require.NoError(t, app.Close())
+
+	assert.ErrorIs(t, app.Start(), ErrNotRunning)
+}

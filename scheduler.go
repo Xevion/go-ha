@@ -184,10 +184,14 @@ func (s *scheduler) refresh(now time.Time) int {
 	for _, item := range items {
 		entry := item.(Item).Value.(*scheduledEntry)
 
-		if dyn, ok := entry.trigger.(dynamicTrigger); ok && dyn.dynamic() {
-			if next := entry.trigger.NextTime(now); next != nil && !next.Equal(entry.fireAt) {
-				entry.fireAt = *next
-				moved++
+		// An entry already due is about to run. Re-deriving it here would push
+		// it past now and skip that occurrence entirely.
+		if entry.fireAt.After(now) {
+			if dyn, ok := entry.trigger.(dynamicTrigger); ok && dyn.dynamic() {
+				if next := entry.trigger.NextTime(now); next != nil && !next.Equal(entry.fireAt) {
+					entry.fireAt = *next
+					moved++
+				}
 			}
 		}
 		s.push(entry)

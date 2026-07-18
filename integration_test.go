@@ -32,7 +32,7 @@ func newApp(t *testing.T, server *hatest.Server) *ha.App {
 func start(t *testing.T, app *ha.App) {
 	t.Helper()
 
-	go app.Start()
+	go func() { _ = app.Start() }()
 	t.Cleanup(func() { _ = app.Close() })
 	time.Sleep(100 * time.Millisecond)
 }

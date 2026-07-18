@@ -87,7 +87,10 @@ func (app *App) RegisterAutomations(automations ...Automation) error {
 				errs = append(errs, fmt.Errorf("%w %q: trigger %T implements both trigger families, which is ambiguous",
 					ErrInvalidAutomation, a.name, t))
 			case isSchedule:
-				app.scheduleAutomation(a, schedule)
+				if !app.scheduleAutomation(a, schedule) {
+					errs = append(errs, fmt.Errorf("%w %q: trigger %v has no next occurrence",
+						ErrInvalidAutomation, a.name, schedule))
+				}
 			case isEvent:
 				if err := app.subscribeAutomation(a, event); err != nil {
 					errs = append(errs, err)
@@ -102,14 +105,17 @@ func (app *App) RegisterAutomations(automations ...Automation) error {
 	return errors.Join(errs...)
 }
 
-func (app *App) scheduleAutomation(a Automation, trig ScheduleTrigger) {
+// scheduleAutomation queues the trigger and reports whether it could be. A
+// trigger with no next occurrence is a configuration error, not something to
+// drop quietly and leave the caller believing it registered.
+func (app *App) scheduleAutomation(a Automation, trig ScheduleTrigger) bool {
 	// A trigger declared before any App exists has nothing to read from until
 	// it joins one. Sun triggers derive their times from an entity.
 	if b, ok := trig.(interface{ bind(StateReader) }); ok {
 		b.bind(app.state)
 	}
 
-	app.schedules.add(schedulerAdapter{trigger: trig}, func() {
+	return app.schedules.add(schedulerAdapter{trigger: trig}, func() {
 		ec := EvalContext{Clock: app.clock, State: app.state}
 		deps := Run{Services: app.service, State: app.state, Trigger: trig}
 
@@ -181,7 +187,11 @@ func (app *App) dispatchEvent(raw []byte) {
 				b.pending.arm(ev.EntityID, delayed.holdFor(), func() {
 					b.automation.fire(app.ctx, ec, deps, ev.EntityID)
 				})
-			case delayed.concerns(ev):
+
+			// Only a real transition cancels. Home Assistant also emits
+			// state_changed when attributes move, and a light reporting a new
+			// brightness has not left the state being waited on.
+			case delayed.concerns(ev) && ev.To.State != ev.From.State:
 				b.pending.disarm(ev.EntityID)
 			}
 			continue
