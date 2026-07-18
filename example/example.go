@@ -1,104 +1,85 @@
+// Command example is a small go-ha application.
 package main
 
 import (
-	"encoding/json"
-	"log/slog"
+	"context"
+	"log"
 	"os"
 	"time"
 
-	// "example/entities" // Optional import generated entities
 	ha "github.com/Xevion/go-ha"
+	"github.com/Xevion/go-ha/types"
 )
 
-//go:generate go run github.com/Xevion/go-ha/cmd/generate
-
 func main() {
-	app, err := ha.NewApp(ha.NewAppRequest{
-		URL:              "http://192.168.86.67:8123", // Replace with your Home Assistant URL
-		HAAuthToken:      os.Getenv("HA_AUTH_TOKEN"),
-		HomeZoneEntityId: "zone.home",
+	app, err := ha.NewApp(types.NewAppRequest{
+		URL:         "http://localhost:8123",
+		HAAuthToken: os.Getenv("HA_AUTH_TOKEN"),
 	})
 	if err != nil {
-		slog.Error("Error connecting to HASS:", "error", err)
-		os.Exit(1)
+		log.Fatalf("connecting to Home Assistant: %v", err)
 	}
+	defer app.Close()
 
-	defer func() {
-		slog.Info("Shutting down application...")
-		if err := app.Close(); err != nil {
-			slog.Error("Error during shutdown", "error", err)
-		}
-		slog.Info("Application shutdown complete")
-	}()
-
-	pantryDoor := ha.
-		NewEntityListener().
-		EntityIds(entities.BinarySensor.PantryDoor). // Use generated entity constant
-		Call(pantryLights).
-		Build()
-
-	_11pmSched := ha.
-		NewDailySchedule().
-		Call(lightsOut).
-		At("23:00").
-		Build()
-
-	_30minsBeforeSunrise := ha.
-		NewDailySchedule().
-		Call(sunriseSched).
-		Sunrise("-30m").
-		Build()
-
-	zwaveEventListener := ha.
-		NewEventListener().
-		EventTypes("zwave_js_value_notification").
-		Call(onEvent).
-		Build()
-
-	app.RegisterEntityListeners(pantryDoor)
-	app.RegisterSchedules(_11pmSched, _30minsBeforeSunrise)
-	app.RegisterEventListeners(zwaveEventListener)
+	if err := app.RegisterAutomations(
+		hallLight(),
+		eveningScene(),
+		lightsOutWhenEveryoneLeaves(),
+		reportDoorbell(),
+	); err != nil {
+		log.Fatalf("registering automations: %v", err)
+	}
 
 	app.Start()
 }
 
-func pantryLights(service *ha.Service, state ha.State, sensor ha.EntityData) {
-	l := "light.pantry"
-	// l := entities.Light.Pantry // Or use generated entity constant
-	if sensor.ToState == "on" {
-		service.HomeAssistant.TurnOn(l)
-	} else {
-		service.HomeAssistant.TurnOff(l)
-	}
+// hallLight turns the hall light on when motion is seen after dark, and off
+// again once the hall has been quiet for five minutes.
+func hallLight() ha.Automation {
+	motion := ha.StateChanged("binary_sensor.hall_motion")
+
+	return ha.NewAutomation("hall light").
+		On(motion.To("on")).
+		When(ha.SunIsDown()).
+		Throttle(30 * time.Second).
+		Do(func(ctx context.Context, run ha.Run) error {
+			return run.Services.Light.TurnOn("light.hall")
+		}).
+		MustBuild()
 }
 
-func onEvent(service *ha.Service, state ha.State, data ha.EventData) {
-	// Since the structure of the event changes depending
-	// on the event type, you can Unmarshal the raw json
-	// into a Go type. If a type for your event doesn't
-	// exist, you can write it yourself! PR's welcome to
-	// the eventTypes.go file :)
-	ev := ha.EventZWaveJSValueNotification{}
-	json.Unmarshal(data.RawEventJSON, &ev)
-	slog.Info("On event invoked", "event", ev)
+// eveningScene runs at sunset, a quarter of an hour early, on weekdays only.
+func eveningScene() ha.Automation {
+	return ha.NewAutomation("evening scene").
+		On(ha.Sunset(-15 * time.Minute)).
+		When(ha.Not(ha.OnWeekdays(time.Saturday, time.Sunday))).
+		Do(func(ctx context.Context, run ha.Run) error {
+			return run.Services.Scene.TurnOn("scene.evening")
+		}).
+		MustBuild()
 }
 
-func lightsOut(service *ha.Service, state ha.State) {
-	// always turn off outside lights
-	service.Light.TurnOff(entities.Light.OutsideLights)
-	s, err := state.Get(entities.BinarySensor.LivingRoomMotion)
-	if err != nil {
-		slog.Warn("couldnt get living room motion state, doing nothing")
-		return
-	}
-
-	// if no motion detected in living room for 30mins
-	if s.State == "off" && time.Since(s.LastChanged).Minutes() > 30 {
-		service.Light.TurnOff(entities.Light.MainLights)
-	}
+// lightsOutWhenEveryoneLeaves waits for the house to stay empty rather than
+// reacting to the first door closing, and restarts that wait if anyone returns.
+func lightsOutWhenEveryoneLeaves() ha.Automation {
+	return ha.NewAutomation("lights out").
+		On(ha.StateChanged("group.family").To("not_home").For(5 * time.Minute)).
+		Mode(ha.ModeRestart).
+		Do(func(ctx context.Context, run ha.Run) error {
+			return run.Services.Light.TurnOff("light.hall")
+		}).
+		MustBuild()
 }
 
-func sunriseSched(service *ha.Service, state ha.State) {
-	service.Light.TurnOn(entities.Light.LivingRoomLamps)
-	service.Light.TurnOff(entities.Light.ChristmasLights)
+// reportDoorbell shows a raw event trigger, for integrations this package does
+// not model directly.
+func reportDoorbell() ha.Automation {
+	return ha.NewAutomation("doorbell").
+		On(ha.EventFired("zha_event")).
+		Mode(ha.ModeQueued).
+		Do(func(ctx context.Context, run ha.Run) error {
+			log.Printf("doorbell event: %s", run.Event.Raw)
+			return nil
+		}).
+		MustBuild()
 }

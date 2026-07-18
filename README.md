@@ -1,304 +1,232 @@
 # go-ha
 
-Write strongly typed [Home Assistant](https://www.home-assistant.io/) automations in Go!
+Write strongly typed [Home Assistant](https://www.home-assistant.io/) automations in Go.
 
 ```bash
 go get github.com/Xevion/go-ha
 ```
 
-or in `go.mod`:
+## An automation
 
 ```go
-require github.com/Xevion/go-ha
+package main
+
+import (
+	"context"
+	"log"
+	"time"
+
+	ha "github.com/Xevion/go-ha"
+	"github.com/Xevion/go-ha/types"
+)
+
+func main() {
+	app, err := ha.NewApp(types.NewAppRequest{
+		URL:         "http://192.168.1.123:8123",
+		HAAuthToken: os.Getenv("HA_AUTH_TOKEN"),
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer app.Close()
+
+	err = app.RegisterAutomations(
+		ha.NewAutomation("hall light on motion").
+			On(ha.StateChanged("binary_sensor.hall_motion").To("on")).
+			When(ha.SunIsDown()).
+			Throttle(time.Minute).
+			Do(func(ctx context.Context, run ha.Run) error {
+				return run.Services.Light.TurnOn("light.hall")
+			}).
+			MustBuild(),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	app.Start()
+}
 ```
 
-## Generate Entity Constants
+## The four layers
 
-You can generate type-safe constants for all your Home Assistant entities using `go generate`. This makes it easier to reference entities in your code.
+Every automation is a trigger, some conditions, a policy and an action.
 
-1. Create a `gen.yaml` file in your project root:
+| Layer | What it decides | Built with |
+| --- | --- | --- |
+| **Trigger** | when to consider running | `StateChanged`, `EventFired`, `Daily`, `Every`, `Cron`, `Sunrise`, `Sunset`, `Dawn`, `Dusk`, `AtStartup` |
+| **Condition** | whether to go ahead | `StateIs`, `StateIsOneOf`, `TimeBetween`, `OnWeekdays`, `SunIsUp`, composed with `All`, `Any`, `Not` |
+| **Policy** | what to do about overlap | `Mode`, `Throttle`, `Limit` |
+| **Action** | the work | `Do(func(ctx, run) error)` |
+
+### Triggers
+
+Triggers come in two families and an automation can hold a mix of both, so one
+rule can say "at sunset, or when the door opens":
+
+```go
+On(ha.Sunset(-15*time.Minute), ha.StateChanged("binary_sensor.door").To("on"))
+```
+
+Schedule triggers are driven from a timing heap. Event triggers declare what
+they need delivered, which is what lets subscriptions be replayed after a
+reconnect rather than silently lost.
+
+`StateChanged` narrows by transition and can require the state to persist:
+
+```go
+ha.StateChanged("binary_sensor.motion").To("off").For(5 * time.Minute)
+```
+
+Sun times come from Home Assistant's own `sun.sun` entity, not from local
+astronomy. Home Assistant runs astral against your latitude, longitude *and*
+elevation with a configurable solar depression, so computing them here would
+quietly disagree with the times on your own dashboard.
+
+### Conditions
+
+Conditions compose, and an error from one means *undecided* rather than false:
+
+```go
+When(ha.All(
+	ha.SunIsDown(),
+	ha.Not(ha.StateIs("input_boolean.guest_mode", "on")),
+	ha.Any(ha.OnWeekdays(time.Saturday, time.Sunday), ha.TimeBetween(ha.TimeOfDay(18, 0), ha.TimeOfDay(23, 0))),
+))
+```
+
+If a condition cannot be evaluated — an entity is unreachable, say — the
+automation's `OnConditionError` setting decides what happens. The default is
+`SkipRun`; use `RunAnyway` where not acting is the more dangerous outcome.
+
+### Policy
+
+`Mode` mirrors Home Assistant's automation `mode:` and applies to the
+automation as a whole:
+
+| Mode | Behaviour when a run is already in flight |
+| --- | --- |
+| `ModeSingle` (default) | ignore the new trigger |
+| `ModeRestart` | cancel the running one, whose context is then done |
+| `ModeQueued` | wait for it, then run |
+| `ModeParallel` | run alongside it |
+
+`Throttle` is counted **per entity**, so one automation watching many entities
+keeps a separate window for each rather than letting a busy one starve the rest.
+
+### Actions
+
+An action receives a context and a `Run`:
+
+```go
+Do(func(ctx context.Context, run ha.Run) error {
+	if run.Event.To.State == "on" {
+		return run.Services.Light.TurnOn("light.hall")
+	}
+	return run.Services.Light.TurnOff("light.hall")
+})
+```
+
+Returning an error logs it; the automation stays live. Under `ModeRestart` the
+context is cancelled when a newer trigger arrives, so long-running actions
+should respect it.
+
+## Generating entity constants
+
+`cmd/generate` reads your Home Assistant and writes an `entities` package with
+a constant per entity, typed by domain.
+
+1. Create `gen.yaml`:
 
 ```yaml
 url: "http://192.168.1.123:8123"
 ha_auth_token: "your_auth_token" # Or set HA_AUTH_TOKEN env var
-home_zone_entity_id: "zone.home" # Optional: defaults to zone.home
 
-# Optional: List of domains to include when generating constants
-# If provided, only these domains will be processed
+# Optional: only these domains are processed.
 include_domains: ["light", "switch", "climate"]
 
-# Optional: List of domains to exclude when generating constants
-# Only used if include_domains is empty
+# Optional: skipped, and only consulted when include_domains is empty.
 exclude_domains: ["device_tracker", "person"]
 ```
 
-2. Add a `//go:generate` comment in your project:
+2. Add a directive and run it:
 
 ```go
 //go:generate go run github.com/Xevion/go-ha/cmd/generate
 ```
 
-Optionally use the `-config` flag to customize the file path of the config file.
-
-3. Run the generator:
-
-```
+```bash
 go generate
 ```
 
-This will create an `entities` package with type-safe constants for all your Home Assistant entities, organized by domain. For example:
+Entities are typed per domain, so a mismatch does not compile:
 
 ```go
-import "your_project/entities"
-
-// Instead of writing "light.living_room" as a string:
-entities.Light.LivingRoom // Type-safe constant
-
-// All your entities are organized by domain
-entities.Switch.Kitchen
-entities.Climate.Bedroom
-entities.MediaPlayer.TVRoom
+run.Services.Light.TurnOn(entities.Light.LivingRoom)  // fine
+run.Services.Light.TurnOn(entities.Switch.Kitchen)    // build error
 ```
 
-The constants are based on the entity ID itself, not the name of the entity in Home Assistant.
+Constants are named from the entity ID, not from its friendly name.
 
-### Write your automations
+## Testing your automations
 
-Check out [`example/example.go`](./example/example.go) for an example of the 3 types of automations — schedules, entity listeners, and event listeners.
-
-> ℹ️ Instead of copying and pasting, try typing it yourself to see how autocomplete guides you through the setup using a builder pattern.
-
-### Run your code
-
-Keeping with the simplicity that Go is famous for, you don't need a specific environment or docker container to run go-ha. You just write and run your code like any other Go binary. So once you build your code, you can run it however you like — using `screen` or `tmux`, a cron job, a linux service, or wrap it up in a docker container if you like!
-
-> _❗ No promises, but I may provide a Docker image with file watching to automatically restart go-ha, to make it easier to use go-ha on a fully managed Home Assistant installation._
-
-## go-ha Concepts
-
-### Overview
-
-The general flow is
-
-1. Create your app
-2. Register automations
-3. Start app
+`hatest` runs an in-process Home Assistant, so automations can be tested
+without one:
 
 ```go
-import (
- ha "github.com/Xevion/go-ha"
- "github.com/Xevion/go-ha/types"
-)
+func TestHallLight(t *testing.T) {
+	server := hatest.New(t)
+	server.SetState("binary_sensor.hall_motion", "off")
 
-// replace with IP and port of your Home Assistant installation
-app, err := ha.NewApp(types.NewAppRequest{
- URL:              "http://192.168.1.123:8123",
- HAAuthToken:      os.Getenv("HA_AUTH_TOKEN"),
- HomeZoneEntityId: "zone.home",
-})
+	app, err := ha.NewApp(types.NewAppRequest{URL: server.URL(), HAAuthToken: hatest.Token})
+	require.NoError(t, err)
+	defer app.Close()
 
-// create automations here (see next sections)
+	require.NoError(t, app.RegisterAutomations(hallLight()))
+	go app.Start()
 
-// register automations
-app.RegisterSchedules(...)
-app.RegisterEntityListeners(...)
-app.RegisterEventListeners(...)
-app.RegisterIntervals(...)
+	server.ChangeState("binary_sensor.hall_motion", "on")
 
-app.Start()
+	calls := server.WaitForCalls(1)
+	assert.Equal(t, "turn_on", calls[0].Service)
+}
 ```
 
-### Connection handling
+## Connection handling
 
-The connection to Home Assistant looks after itself, and the behaviour is worth
-knowing because it decides what happens to your automations during an outage.
+The client owns one websocket connection and re-establishes it with exponential
+backoff and jitter when it drops. Subscriptions are declarative and replayed on
+every reconnect.
 
-**Reconnection.** A dropped connection is re-established automatically, with an
-exponential backoff that starts at one second, caps at a minute, and is
-jittered so a fleet of clients does not retry in lockstep. Every subscription
-is re-sent afterwards: Home Assistant replays nothing on its own, and the
-message ids from the old connection mean nothing on the new one.
+Entity state is cached locally: seeded from the REST API on each connection and
+maintained from the event stream, so a condition costs a map lookup rather than
+an HTTP round trip, and automations keep working through a disconnect.
 
-**Liveness.** While idle, go-ha sends the protocol's own `ping` every 30
-seconds. An unanswered ping drops the connection and triggers a reconnect. This
-catches a Home Assistant whose event loop has stopped responding while its HTTP
-server still accepts traffic, which a TCP-level check reports as perfectly
-healthy.
+Events are read into a bounded queue and handled by a worker pool. Home
+Assistant disconnects a client that stops draining its socket for five seconds,
+so the queue is deliberately finite: shedding load is survivable, being
+disconnected is not. Drops are reported.
 
-**A refused token is fatal.** If Home Assistant rejects your token, go-ha stops
-rather than reconnecting forever, and `app.Start()` returns. Retrying a revoked
-token only produces the same answer more slowly.
-
-**Backpressure.** Incoming events cross a bounded queue to a pool of workers,
-and your callbacks run on those workers. If the queue fills, further events are
-dropped and counted. This is deliberate: Home Assistant disconnects a client
-that stops draining its socket for five seconds, so shedding a burst is
-survivable where stalling is not. If you see the warning, the fix is usually a
-callback that returns faster rather than a bigger queue.
-
-Both the queue size and the worker count are tunable:
+Tune it if the defaults do not suit:
 
 ```go
-app, err := ha.NewApp(types.NewAppRequest{
- URL:         "http://192.168.1.123:8123",
- HAAuthToken: os.Getenv("HA_AUTH_TOKEN"),
- Connection: types.ConnectionOptions{
-  QueueSize: 1024,
-  Workers:   8,
- },
+ha.NewApp(types.NewAppRequest{
+	URL:         "...",
+	HAAuthToken: "...",
+	Connection: types.ConnectionOptions{
+		QueueSize:    512,
+		Workers:      8,
+		PingInterval: 15 * time.Second,
+	},
 })
 ```
 
-A full reference is available on [pkg.go.dev](https://pkg.go.dev/github.com/Xevion/go-ha), but all you need to know to get started are the four types of automations in go-ha.
+## Running it
 
-- [Daily Schedules](#daily-schedule)
-- [Entity Listeners](#entity-listener)
-- [Event Listeners](#event-listener)
-- [Intervals](#interval)
+There is no runtime to install and no container to build. It is an ordinary Go
+binary: build it and run it under systemd, a cron job, `tmux`, Docker, or
+whatever else you already use.
 
-### Daily Schedule
+## Credits
 
-Daily Schedules run at a specific time each day.
-
-```go
-_7pm := ga.NewDailySchedule().Call(myFunc).At("19:00").Build()
-```
-
-Schedules can also be run at sunrise or sunset, with an optional [offset](https://pkg.go.dev/time#ParseDuration).
-
-```go
-// 30 mins before sunrise
-sunrise := ga.NewDailySchedule().Call(myFunc).Sunrise(app, "-30m").Build()
-// at sunset
-sunset := ga.NewDailySchedule().Call(myFunc).Sunset().Build()
-```
-
-Daily schedules have other functions to change the behavior.
-
-| Function                                  | Info                                                                                                     |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| ExceptionDates(t time.Time, ...time.Time) | Skip the schedule on the given date(s). Functions like a blocklist. Cannot be combined with OnlyOnDates. |
-| OnlyOnDates(t time.Time, ...time.Time)    | Run only on the given date(s). Functions like an allowlist. Cannot be combined with ExceptionDates.      |
-
-#### Schedule Callback function
-
-The function passed to `.Call()` must take
-
-- `*ga.Service` used to call home assistant services
-- `*ga.State` used to retrieve state from home assistant
-
-```go
-func myFunc(se *ga.Service, st *ga.State) {
-  // ...
-}
-```
-
-### Entity Listener
-
-Entity Listeners are used to respond to entities changing state. The simplest entity listener looks like:
-
-```go
-etl := ga.NewEntityListener().EntityIds("binary_sensor.front_door").Call(myFunc).Build()
-```
-
-Entity listeners have other functions to change the behavior.
-
-| Function                                | Info                                                                                                              |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| ToState("on")                           | Function only called if new state matches argument.                                                               |
-| FromState("on")                         | Function only called if old state matches argument.                                                               |
-| Throttle("30s")                         | Minimum time between function calls.                                                                              |
-| Duration("30s")                         | Requires ToState(). Sets how long the entity must be in the state before running your function.                   |
-| OnlyAfter("03:00")                      | Only run your function after a specified time of day.                                                             |
-| OnlyBefore("03:00")                     | Only run your function before a specified time of day.                                                            |
-| OnlyBetween("03:00", "14:00")           | Only run your function between two specified times of day.                                                        |
-| ExceptionDates(time.Time, ...time.Time) | A one time exception on the given date. Time is ignored, applies to whole day. Functions like a "blocklist".      |
-| ExceptionRange(time.Time, time.Time)    | A one time exception between the two date/times. Both date and time are considered. Functions like a "blocklist". |
-| RunOnStartup()                          | Run your callback during `App.Start()`.                                                                           |
-
-#### Entity Listener Callback function
-
-The function passed to `.Call()` must take
-
-- `*ga.Service` used to call home assistant services
-- `*ga.State` used to retrieve state from home assistant
-- `ga.EntityData` which is the entity that triggered the listener
-
-```go
-func myFunc(se *ga.Service, st *ga.State, e ga.EntityData) {
-  // ...
-}
-```
-
-### Event Listeners
-
-Event listeners allow you to respond to Home Assistant events in real-time. You can create an event listener using the builder pattern:
-
-```go
-eventListener := ga.
-    NewEventListener().
-    EventTypes("zwave_js_value_notification"). // Specify one or more event types
-    Call(myCallbackFunc).                     // Specify the callback function
-    Build()
-
-// Register the listener with your app
-app.RegisterEventListeners(eventListener)
-```
-
-Event listeners have other functions to change the behavior.
-
-| Function                                | Info                                                                                                             |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| OnlyBetween("03:00", "14:00")           | Only run your function between two specified times of day                                                        |
-| OnlyAfter("03:00")                      | Only run your function after a specified time of day                                                             |
-| OnlyBefore("03:00")                     | Only run your function before a specified time of day                                                            |
-| Throttle("30s")                         | Minimum time between function calls                                                                              |
-| ExceptionDates(time.Time, ...time.Time) | A one time exception on the given date. Time is ignored, applies to whole day. Functions like a "blocklist"      |
-| ExceptionRange(time.Time, time.Time)    | A one time exception between the two date/times. Both date and time are considered. Functions like a "blocklist" |
-
-The callback function receives three parameters:
-
-```go
-func myCallback(service *ga.Service, state ga.State, data ga.EventData) {
-    // You can unmarshal the raw JSON into a type-safe struct
-    ev := ga.EventZWaveJSValueNotification{}
-    json.Unmarshal(data.RawEventJSON, &ev)
-
-    // Handle the event...
-}
-```
-
-> 💡 Check `eventTypes.go` for pre-defined event types, or create your own struct type for custom events and contribute them back to go-ha with a PR.
-
-### Interval
-
-Intervals are used to run a function on an interval.
-
-```go
-// run every hour at the 30-minute mark
-interval := ga.NewInterval().Call(myFunc).Every("1h").StartingAt("00:30").Build()
-// run every 5 minutes between 10am and 5pm
-interval = ga.NewInterval().Call(myFunc).Every("5m").StartingAt("10:00").EndingAt("17:00").Build()
-```
-
-Intervals have other functions to change the behavior.
-
-| Function                                | Info                                                                                |
-| --------------------------------------- | ----------------------------------------------------------------------------------- |
-| StartingAt(TimeString)                  | What time the interval begins to run each day.                                      |
-| EndingAt(TimeString)                    | What time the interval stops running each day.                                      |
-| ExceptionDates(time.Time, ...time.Time) | A one time exception on the given date. Time is ignored, applies to whole day.      |
-| ExceptionRange(time.Time, time.Time)    | A one time exception between the two date/times. Both date and time are considered. |
-
-#### Interval Callback function
-
-The function passed to `.Call()` must take
-
-- `*ga.Service` used to call home assistant services
-- `*ga.State` used to retrieve state from home assistant
-
-```go
-func myFunc(se *ga.Service, st *ga.State) {
-  // ...
-}
-```
+A fork of [saml-dev/gome-assistant](https://github.com/saml-dev/gome-assistant).
