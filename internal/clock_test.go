@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -49,22 +50,25 @@ func TestFakeClockSet(t *testing.T) {
 	assert.Equal(t, target, c.Now(), "Set replaces the instant, it does not offset it")
 }
 
-func TestFakeClockCarbon(t *testing.T) {
+// FakeClock is read from callback goroutines while a test steps it forward.
+func TestFakeClockIsSafeUnderConcurrentReads(t *testing.T) {
 	c := NewFakeClock(clockBase)
 
-	assert.Equal(t, c.Now(), c.Carbon().StdTime(), "Carbon and Now must report the same instant")
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range 100 {
+				_ = c.Now()
+			}
+		}()
+	}
 
-	c.Advance(time.Hour)
-	assert.Equal(t, c.Now(), c.Carbon().StdTime(), "Carbon must follow Advance")
-}
+	for range 100 {
+		c.Advance(time.Second)
+	}
+	wg.Wait()
 
-func TestRealClockCarbonTracksNow(t *testing.T) {
-	c := RealClock{}
-
-	before := c.Now()
-	got := c.Carbon().StdTime()
-	after := c.Now()
-
-	assert.False(t, got.Before(before), "Carbon must not predate the read before it")
-	assert.False(t, got.After(after), "Carbon must not postdate the read after it")
+	assert.Equal(t, clockBase.Add(100*time.Second), c.Now())
 }

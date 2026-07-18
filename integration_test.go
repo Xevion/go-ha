@@ -16,10 +16,16 @@ import (
 // newApp connects a real App to an in-process Home Assistant.
 func newApp(t *testing.T, server *hatest.Server) *ha.App {
 	t.Helper()
+	return newAppWithClock(t, server, nil)
+}
+
+func newAppWithClock(t *testing.T, server *hatest.Server, clock types.Clock) *ha.App {
+	t.Helper()
 
 	app, err := ha.NewApp(types.NewAppRequest{
 		URL:         server.URL(),
 		HAAuthToken: hatest.Token,
+		Clock:       clock,
 	})
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = app.Close() })
@@ -156,6 +162,44 @@ func TestEventTriggerFiresOnACustomEvent(t *testing.T) {
 
 	server.Fire("zha_event", map[string]any{"command": "button_press"})
 	server.WaitForCalls(1)
+}
+
+// Throttle windows are measured against the injected clock, so a test can step
+// past one instead of sleeping through it. Without injection none of this
+// behaviour was observable from outside the module.
+func TestInjectedClockDrivesTheThrottleWindow(t *testing.T) {
+	server := hatest.New(t)
+	server.SetState("binary_sensor.motion", "off")
+
+	clock := hatest.NewClock(time.Date(2026, 7, 19, 12, 0, 0, 0, time.UTC))
+	app := newAppWithClock(t, server, clock)
+
+	require.NoError(t, app.RegisterAutomations(
+		ha.NewAutomation("throttled").
+			On(ha.StateChanged("binary_sensor.motion").To("on")).
+			Throttle(time.Hour).
+			Mode(ha.ModeParallel).
+			Do(func(_ context.Context, run ha.Run) error {
+				return run.Services.Light.TurnOn("light.hall")
+			}).
+			MustBuild(),
+	))
+	start(t, app)
+
+	server.ChangeState("binary_sensor.motion", "on")
+	server.WaitForCalls(1)
+
+	server.ChangeState("binary_sensor.motion", "off")
+	server.ChangeState("binary_sensor.motion", "on")
+	time.Sleep(200 * time.Millisecond)
+	assert.Len(t, server.Calls(), 1, "still inside the window")
+
+	// Stepping the clock past the window opens it, with no real time elapsed.
+	clock.Advance(time.Hour)
+	server.ChangeState("binary_sensor.motion", "off")
+	server.ChangeState("binary_sensor.motion", "on")
+
+	server.WaitForCalls(2)
 }
 
 func TestAppRefusesABadToken(t *testing.T) {

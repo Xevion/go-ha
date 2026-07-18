@@ -13,6 +13,10 @@ type NewAppRequest struct {
 	HAAuthToken string
 
 	// Optional
+	// Clock replaces the time source, for tests. Defaults to the system clock.
+	Clock Clock
+
+	// Optional
 	// Connection tunes the websocket connection. The zero value uses defaults
 	// suitable for a typical Home Assistant instance.
 	Connection ConnectionOptions

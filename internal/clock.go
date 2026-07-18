@@ -3,15 +3,12 @@ package internal
 import (
 	"sync"
 	"time"
-
-	"github.com/dromara/carbon/v2"
 )
 
 // Clock reports the current time. Production code uses RealClock; tests pin an
 // instant with FakeClock and step it forward deliberately.
 type Clock interface {
 	Now() time.Time
-	Carbon() *carbon.Carbon
 }
 
 // RealClock reads the system clock.
@@ -19,10 +16,6 @@ type RealClock struct{}
 
 func (RealClock) Now() time.Time {
 	return time.Now()
-}
-
-func (RealClock) Carbon() *carbon.Carbon {
-	return carbon.Now()
 }
 
 // FakeClock reports a fixed instant until moved by Set or Advance. Callbacks run
@@ -41,10 +34,6 @@ func (c *FakeClock) Now() time.Time {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.now
-}
-
-func (c *FakeClock) Carbon() *carbon.Carbon {
-	return carbon.CreateFromStdTime(c.Now())
 }
 
 // Set replaces the current instant.

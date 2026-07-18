@@ -35,7 +35,7 @@ type App struct {
 	client *connect.Client
 
 	httpClient *internal.HttpClient
-	clock      internal.Clock
+	clock      Clock
 
 	service *Service
 	state   *state
@@ -91,7 +91,11 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 
 	httpClient := internal.NewHttpClient(ctx, baseURL, request.HAAuthToken)
 
-	clock := internal.RealClock{}
+	var clock Clock = internal.RealClock{}
+	if request.Clock != nil {
+		clock = request.Clock
+	}
+
 	state := newState(httpClient)
 
 	client, err := connect.NewClient(baseURL, request.HAAuthToken, connect.Options{

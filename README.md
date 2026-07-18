@@ -195,6 +195,21 @@ func TestHallLight(t *testing.T) {
 }
 ```
 
+Supply a `Clock` to step time by hand, so a schedule, a throttle window or a
+`For` duration resolves on demand rather than in real time:
+
+```go
+clock := hatest.NewClock(time.Date(2026, 7, 19, 12, 0, 0, 0, time.UTC))
+app, err := ha.NewApp(types.NewAppRequest{
+	URL:         server.URL(),
+	HAAuthToken: hatest.Token,
+	Clock:       clock,
+})
+
+// ...trigger the automation once, then move past its throttle window.
+clock.Advance(time.Hour)
+```
+
 ## Connection handling
 
 The client owns one websocket connection and re-establishes it with exponential

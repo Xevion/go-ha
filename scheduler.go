@@ -8,7 +8,6 @@ import (
 
 	"github.com/Workiva/go-datastructures/queue"
 
-	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/internal/scheduling"
 )
 
@@ -49,10 +48,10 @@ type scheduler struct {
 	// to do ever again.
 	mu    sync.Mutex
 	queue *queue.PriorityQueue
-	clock internal.Clock
+	clock Clock
 }
 
-func newScheduler(clock internal.Clock) *scheduler {
+func newScheduler(clock Clock) *scheduler {
 	return &scheduler{
 		queue: queue.NewPriorityQueue(100, false),
 		clock: clock,

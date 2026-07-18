@@ -4,8 +4,6 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/Xevion/go-ha/internal"
 )
 
 // Mode decides what a trigger does while a previous run of the same automation
@@ -75,7 +73,7 @@ func (p Policy) limit() int {
 // every other one.
 type runner struct {
 	policy Policy
-	clock  internal.Clock
+	clock  Clock
 
 	mu sync.Mutex
 
@@ -96,14 +94,14 @@ type runner struct {
 	wg sync.WaitGroup
 }
 
-func newRunner(policy Policy, clock internal.Clock) *runner {
+func newRunner(policy Policy, clock Clock) *runner {
 	return &runner{policy: policy, clock: clock, lastRan: map[string]time.Time{}}
 }
 
 // withClock points the runner at the app's clock. Conditions already read it,
 // and a throttle measured against a different clock than the conditions it
 // gates is not testable and not coherent.
-func (r *runner) withClock(clock internal.Clock) {
+func (r *runner) withClock(clock Clock) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.clock = clock

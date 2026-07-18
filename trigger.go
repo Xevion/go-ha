@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Xevion/go-ha/internal/scheduling"
+	"github.com/Xevion/go-ha/types"
 )
 
 // Trigger is what starts an automation.
@@ -133,3 +134,7 @@ func (t *startupTrigger) String() string { return "startup" }
 // allow type parameters on methods, which is why they take their domain's id
 // type exactly.
 type EntityRef interface{ ~string }
+
+// Clock is the time source conditions and policies read. It is an alias so
+// that types.NewAppRequest can name it without this package importing itself.
+type Clock = types.Clock
