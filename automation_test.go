@@ -15,7 +15,7 @@ func noAction(context.Context, Run) error { return nil }
 func TestBuildRejectsAnIncompleteAutomation(t *testing.T) {
 	tests := []struct {
 		name    string
-		builder automationBuilder
+		builder AutomationBuilder
 		missing string
 	}{
 		{"no name", NewAutomation("").On(Daily(TimeOfDay(9, 0))).Do(noAction), "name"},

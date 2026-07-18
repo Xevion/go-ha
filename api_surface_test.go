@@ -95,3 +95,29 @@ func TestServiceTypesAreNameableFromOutside(t *testing.T) {
 type senderFunc func(types.Request) error
 
 func (f senderFunc) Send(r types.Request) error { return f(r) }
+
+// nightly is the shared prefix pattern the docs describe. It only compiles
+// because AutomationBuilder is exported: a constructor returning an unexported
+// type cannot be named in a signature like this.
+func nightly(name string) ha.AutomationBuilder {
+	return ha.NewAutomation(name).
+		When(ha.SunIsDown()).
+		Mode(ha.ModeRestart)
+}
+
+func TestSharedBuilderPrefixIsExpressible(t *testing.T) {
+	porch, err := nightly("porch").
+		On(ha.StateChanged("binary_sensor.porch").To("on")).
+		Do(func(context.Context, ha.Run) error { return nil }).
+		Build()
+	require.NoError(t, err)
+
+	hall, err := nightly("hall").
+		On(ha.StateChanged("binary_sensor.hall").To("on")).
+		Do(func(context.Context, ha.Run) error { return nil }).
+		Build()
+	require.NoError(t, err)
+
+	assert.Equal(t, "porch", porch.Name())
+	assert.Equal(t, "hall", hall.Name())
+}

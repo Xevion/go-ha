@@ -73,21 +73,22 @@ func (a Automation) String() string {
 // surfaces once, at build time, rather than as a panic at fire time.
 type validator interface{ validate() error }
 
-// automationBuilder accumulates an automation. Every stage returns a copy, so
-// a shared prefix can be branched into several automations.
-type automationBuilder struct {
+// AutomationBuilder accumulates an automation. Every stage returns a copy, so a
+// shared prefix can be held in a variable, or returned from a function, and
+// branched into several automations.
+type AutomationBuilder struct {
 	a    Automation
 	errs []error
 }
 
 // NewAutomation starts building an automation. The name appears in logs.
-func NewAutomation(name string) automationBuilder {
-	return automationBuilder{a: Automation{name: name}}
+func NewAutomation(name string) AutomationBuilder {
+	return AutomationBuilder{a: Automation{name: name}}
 }
 
 // On adds triggers. An automation fires when any of them fires, and they may
 // mix the schedule and event families freely.
-func (b automationBuilder) On(triggers ...Trigger) automationBuilder {
+func (b AutomationBuilder) On(triggers ...Trigger) AutomationBuilder {
 	// Copied rather than appended in place: two automations branched off this
 	// builder would otherwise write into the same backing array.
 	b.a.triggers = concat(b.a.triggers, triggers)
@@ -96,7 +97,7 @@ func (b automationBuilder) On(triggers ...Trigger) automationBuilder {
 
 // When adds conditions, all of which must hold. Compose with All, Any and Not
 // for anything more involved.
-func (b automationBuilder) When(conditions ...Condition) automationBuilder {
+func (b AutomationBuilder) When(conditions ...Condition) AutomationBuilder {
 	existing := b.a.condition
 	combined := All(conditions...)
 	if existing != nil {
@@ -107,39 +108,39 @@ func (b automationBuilder) When(conditions ...Condition) automationBuilder {
 }
 
 // Mode sets what happens when a trigger arrives while a run is in flight.
-func (b automationBuilder) Mode(m Mode) automationBuilder {
+func (b AutomationBuilder) Mode(m Mode) AutomationBuilder {
 	b.a.policy.Mode = m
 	return b
 }
 
 // Throttle drops triggers arriving within d of the last admitted one, counted
 // separately for each entity.
-func (b automationBuilder) Throttle(d time.Duration) automationBuilder {
+func (b AutomationBuilder) Throttle(d time.Duration) AutomationBuilder {
 	b.a.policy.Throttle = d
 	return b
 }
 
 // Limit caps in-flight runs under ModeParallel and waiting runs under
 // ModeQueued.
-func (b automationBuilder) Limit(n int) automationBuilder {
+func (b AutomationBuilder) Limit(n int) AutomationBuilder {
 	b.a.policy.Limit = n
 	return b
 }
 
 // OnConditionError decides what happens when a condition cannot be evaluated.
-func (b automationBuilder) OnConditionError(p ConditionErrorPolicy) automationBuilder {
+func (b AutomationBuilder) OnConditionError(p ConditionErrorPolicy) AutomationBuilder {
 	b.a.onConditionError = p
 	return b
 }
 
 // Do sets the action.
-func (b automationBuilder) Do(action Action) automationBuilder {
+func (b AutomationBuilder) Do(action Action) AutomationBuilder {
 	b.a.action = action
 	return b
 }
 
 // Build produces the automation, reporting everything wrong with it at once.
-func (b automationBuilder) Build() (Automation, error) {
+func (b AutomationBuilder) Build() (Automation, error) {
 	errs := concat(nil, b.errs)
 
 	if b.a.name == "" {
@@ -173,7 +174,7 @@ func (b automationBuilder) Build() (Automation, error) {
 // MustBuild builds the automation and panics if it cannot. It is for package
 // level declarations, where there is no error to return and a misconfigured
 // automation should stop the program before it starts.
-func (b automationBuilder) MustBuild() Automation {
+func (b AutomationBuilder) MustBuild() Automation {
 	a, err := b.Build()
 	if err != nil {
 		panic(err)
