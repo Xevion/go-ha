@@ -20,11 +20,21 @@ type delayedTrigger interface {
 type pendingRuns struct {
 	mu     sync.Mutex
 	timers map[string]*time.Timer
+
+	// gen numbers the waits armed for each entity. Stop cannot recall a timer
+	// whose callback has already begun, so a superseded callback would
+	// otherwise delete the map entry belonging to its own replacement, leaving
+	// that replacement untracked and beyond the reach of disarm and stop.
+	gen map[string]uint64
+
 	closed bool
 }
 
 func newPendingRuns() *pendingRuns {
-	return &pendingRuns{timers: map[string]*time.Timer{}}
+	return &pendingRuns{
+		timers: map[string]*time.Timer{},
+		gen:    map[string]uint64{},
+	}
 }
 
 // arm schedules run for this entity, replacing any wait already in progress.
@@ -39,15 +49,21 @@ func (p *pendingRuns) arm(entityID string, d time.Duration, run func()) {
 		existing.Stop()
 	}
 
+	p.gen[entityID]++
+	mine := p.gen[entityID]
+
 	p.timers[entityID] = time.AfterFunc(d, func() {
 		p.mu.Lock()
-		delete(p.timers, entityID)
-		stopped := p.closed
+		// Only the newest wait for this entity may act. An older one whose
+		// callback started before it could be stopped finds a newer generation
+		// here and retires quietly.
+		current := p.gen[entityID] == mine && !p.closed
+		if current {
+			delete(p.timers, entityID)
+		}
 		p.mu.Unlock()
 
-		// Shutdown can land between the timer firing and this point, and a
-		// callback that starts then has nowhere to send its service calls.
-		if !stopped {
+		if current {
 			run()
 		}
 	})
@@ -63,6 +79,9 @@ func (p *pendingRuns) disarm(entityID string) {
 		timer.Stop()
 		delete(p.timers, entityID)
 	}
+	// Advanced even when no timer was found, so a callback already in flight
+	// sees itself superseded and does not run.
+	p.gen[entityID]++
 }
 
 // stop cancels every wait and refuses further ones, for shutdown.

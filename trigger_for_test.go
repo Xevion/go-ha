@@ -2,6 +2,7 @@ package ha
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -119,4 +120,40 @@ func TestAtStartupRunsThroughTheScheduler(t *testing.T) {
 
 	// Retired after firing, so a later pass finds nothing.
 	assert.Equal(t, 0, app.schedules.runDue(app.clock.Now()))
+}
+
+// Stop cannot recall a timer whose callback has already begun. Such a callback
+// used to delete the map entry belonging to its own replacement, leaving that
+// replacement untracked and beyond the reach of disarm and stop, so a wait
+// could fire after shutdown.
+func TestSupersededWaitDoesNotOrphanItsReplacement(t *testing.T) {
+	p := newPendingRuns()
+
+	var ranB atomic.Bool
+	entered := make(chan struct{})
+	release := make(chan struct{})
+
+	p.arm("light.a", time.Millisecond, func() {})
+
+	// Stand in for the first callback interleaving: past Stop, about to take
+	// the lock and clear its entry.
+	go func() {
+		close(entered)
+		<-release
+		p.mu.Lock()
+		if p.gen["light.a"] == 1 {
+			delete(p.timers, "light.a")
+		}
+		p.mu.Unlock()
+	}()
+	<-entered
+
+	p.arm("light.a", 60*time.Millisecond, func() { ranB.Store(true) })
+	close(release)
+	time.Sleep(10 * time.Millisecond)
+
+	p.disarm("light.a")
+	time.Sleep(120 * time.Millisecond)
+
+	assert.False(t, ranB.Load(), "the replacement fired despite being disarmed")
 }

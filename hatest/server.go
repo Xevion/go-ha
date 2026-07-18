@@ -36,7 +36,14 @@ type Server struct {
 	t    testing.TB
 	http *httptest.Server
 
+	// handlers tracks live websocket handlers, so Close can wait for them to
+	// unwind before tearing the listener down. httptest's Close otherwise sits
+	// for its full five second grace period waiting on a connection that has
+	// already been told to go away.
+	handlers sync.WaitGroup
+
 	mu       sync.Mutex
+	closed   bool
 	entities map[string]entity
 	calls    []ServiceCall
 	// subs maps a subscription id to the event type it wants, per connection.
@@ -80,7 +87,32 @@ func New(t testing.TB) *Server {
 // URL is the address to give ha.NewAppRequest.
 func (s *Server) URL() string { return s.http.URL }
 
-func (s *Server) Close() { s.http.Close() }
+// Close shuts the server down and closes any live websocket, which is what
+// releases the goroutine reading it. httptest's own Close waits on idle
+// connections, and a websocket never becomes idle.
+func (s *Server) Close() {
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return
+	}
+	s.closed = true
+
+	conns := make([]*connection, 0, len(s.conns))
+	for c := range s.conns {
+		conns = append(conns, c)
+	}
+	s.mu.Unlock()
+
+	// CloseNow rather than Close: a graceful close waits for the peer's reply
+	// frame, and a client being torn down alongside the server never sends one.
+	for _, c := range conns {
+		_ = c.ws.CloseNow()
+	}
+	s.handlers.Wait()
+
+	s.http.Close()
+}
 
 // SetState installs an entity without announcing it, for setting up the world
 // before an App connects.
@@ -261,6 +293,9 @@ func (s *Server) serveState(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) serveWebsocket(w http.ResponseWriter, r *http.Request) {
+	s.handlers.Add(1)
+	defer s.handlers.Done()
+
 	ws, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		return

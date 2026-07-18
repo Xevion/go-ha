@@ -3,6 +3,7 @@ package ha
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/Workiva/go-datastructures/queue"
@@ -23,6 +24,11 @@ type scheduledEntry struct {
 // Clock, so queue ordering and requeue arithmetic can be exercised without a
 // connection, an HTTP client or a context.
 type scheduler struct {
+	// mu makes composite operations atomic against each other. refresh drains
+	// the whole queue and refills it, and without this the run loop can peek
+	// into that window, see an empty queue, and conclude there is nothing left
+	// to do ever again.
+	mu    sync.Mutex
 	queue *queue.PriorityQueue
 	clock internal.Clock
 }
@@ -37,6 +43,9 @@ func newScheduler(clock internal.Clock) *scheduler {
 // add queues trigger for its first fire time after the clock's current instant.
 // A trigger with no next occurrence is reported and dropped.
 func (s *scheduler) add(trigger scheduling.Trigger, run func()) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	next := trigger.NextTime(s.clock.Now())
 	if next == nil {
 		slog.Warn("Trigger has no next occurrence, not scheduling", "trigger", trigger)
@@ -86,6 +95,26 @@ func (s *scheduler) requeue(entry *scheduledEntry) bool {
 // peek returns the entry due soonest without removing it, or nil when nothing
 // is queued.
 func (s *scheduler) peek() *scheduledEntry {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.peekLocked()
+}
+
+// nextFireAt reports when the soonest entry is due. It returns the time rather
+// than the entry, because a caller reading fireAt off an entry does so outside
+// the lock, where refresh may be rewriting it.
+func (s *scheduler) nextFireAt() (time.Time, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	entry := s.peekLocked()
+	if entry == nil {
+		return time.Time{}, false
+	}
+	return entry.fireAt, true
+}
+
+func (s *scheduler) peekLocked() *scheduledEntry {
 	item := s.queue.Peek()
 	if item == nil {
 		return nil
@@ -97,6 +126,9 @@ func (s *scheduler) peek() *scheduledEntry {
 // how many ran. A process suspended across several slots catches up here rather
 // than losing them.
 func (s *scheduler) runDue(now time.Time) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	fired := 0
 	for {
 		entry := s.pop()
@@ -116,6 +148,8 @@ func (s *scheduler) runDue(now time.Time) int {
 }
 
 func (s *scheduler) len() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return s.queue.Len()
 }
 
@@ -134,6 +168,9 @@ type dynamicTrigger interface {
 // attribute has not crossed the network yet, so it would answer from the value
 // that just expired every single time.
 func (s *scheduler) refresh(now time.Time) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.queue.Empty() {
 		return 0
 	}
@@ -173,13 +210,16 @@ func (s *scheduler) run(ctx context.Context, rescheduled <-chan struct{}, what s
 		// several slots catches up rather than losing them.
 		s.runDue(s.clock.Now())
 
-		entry := s.peek()
-		if entry == nil {
-			slog.Info("Nothing left to run", "kind", what)
-			return
+		// An empty queue is not the end. A trigger can retire and leave nothing
+		// behind, an automation can be registered later, and a dynamic trigger
+		// can come back with a time. Treating it as terminal meant one unlucky
+		// peek during a refresh stopped every schedule for good.
+		wait := time.Hour
+		if next, ok := s.nextFireAt(); ok {
+			wait = time.Until(next)
 		}
 
-		timer := time.NewTimer(time.Until(entry.fireAt))
+		timer := time.NewTimer(wait)
 		select {
 		case <-timer.C:
 		case <-rescheduled:
