@@ -5,8 +5,8 @@ type InputBoolean struct {
 }
 
 // TurnOn turns on an input boolean entity.
-func (ib InputBoolean) TurnOn(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (ib InputBoolean) TurnOn(entityId InputBooleanID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "input_boolean"
 	req.Service = "turn_on"
 
@@ -14,8 +14,8 @@ func (ib InputBoolean) TurnOn(entityId string) error {
 }
 
 // Toggle toggles an input boolean entity.
-func (ib InputBoolean) Toggle(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (ib InputBoolean) Toggle(entityId InputBooleanID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "input_boolean"
 	req.Service = "toggle"
 
@@ -23,8 +23,8 @@ func (ib InputBoolean) Toggle(entityId string) error {
 }
 
 // TurnOff turns off an input boolean entity.
-func (ib InputBoolean) TurnOff(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (ib InputBoolean) TurnOff(entityId InputBooleanID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "input_boolean"
 	req.Service = "turn_off"
 	return ib.conn.Send(&req)

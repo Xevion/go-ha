@@ -70,7 +70,7 @@ func TestAutomationBuildsFromExportedAPIOnly(t *testing.T) {
 // The point of promoting the services package: a user can name a service type
 // and write helpers over it. While it lived under internal/ the call worked but
 // the type could not be spelled, so this function was impossible to declare.
-func dimTo(light *services.Light, entityID string, brightness int) error {
+func dimTo(light *services.Light, entityID services.LightID, brightness int) error {
 	return light.TurnOn(entityID, map[string]any{"brightness": brightness})
 }
 

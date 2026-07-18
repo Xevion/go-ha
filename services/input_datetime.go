@@ -9,8 +9,8 @@ type InputDatetime struct {
 	conn Sender
 }
 
-func (ib InputDatetime) Set(entityId string, value time.Time) error {
-	req := NewBaseServiceRequest(entityId)
+func (ib InputDatetime) Set(entityId InputDatetimeID, value time.Time) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "input_datetime"
 	req.Service = "set_datetime"
 	req.ServiceData = map[string]any{

@@ -5,7 +5,7 @@ type AdaptiveLighting struct {
 }
 
 // Set manual control for an adaptive lighting entity.
-func (al AdaptiveLighting) SetManualControl(entityId string, enabled bool) error {
+func (al AdaptiveLighting) SetManualControl(entityId EntityID, enabled bool) error {
 	req := NewBaseServiceRequest("")
 	req.Domain = "adaptive_lighting"
 	req.Service = "set_manual_control"

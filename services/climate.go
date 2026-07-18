@@ -8,8 +8,8 @@ type Climate struct {
 	conn Sender
 }
 
-func (c Climate) SetFanMode(entityId string, fanMode string) error {
-	req := NewBaseServiceRequest(entityId)
+func (c Climate) SetFanMode(entityId ClimateID, fanMode string) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "climate"
 	req.Service = "set_fan_mode"
 	req.ServiceData = map[string]any{"fan_mode": fanMode}
@@ -17,8 +17,8 @@ func (c Climate) SetFanMode(entityId string, fanMode string) error {
 	return c.conn.Send(&req)
 }
 
-func (c Climate) SetTemperature(entityId string, serviceData types.SetTemperatureRequest) error {
-	req := NewBaseServiceRequest(entityId)
+func (c Climate) SetTemperature(entityId ClimateID, serviceData types.SetTemperatureRequest) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "climate"
 	req.Service = "set_temperature"
 	req.ServiceData = serviceData.ToJSON()

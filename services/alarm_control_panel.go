@@ -5,8 +5,8 @@ type AlarmControlPanel struct {
 }
 
 // Send the alarm the command for arm away. Takes an entityId and an optional map that is translated into service_data.
-func (acp AlarmControlPanel) ArmAway(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (acp AlarmControlPanel) ArmAway(entityId AlarmControlPanelID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "alarm_control_panel"
 	req.Service = "alarm_arm_away"
 	if len(serviceData) != 0 {
@@ -17,8 +17,8 @@ func (acp AlarmControlPanel) ArmAway(entityId string, serviceData ...map[string]
 }
 
 // Send the alarm the command for arm away. Takes an entityId and an optional map that is translated into service_data.
-func (acp AlarmControlPanel) ArmWithCustomBypass(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (acp AlarmControlPanel) ArmWithCustomBypass(entityId AlarmControlPanelID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "alarm_control_panel"
 	req.Service = "alarm_arm_custom_bypass"
 	if len(serviceData) != 0 {
@@ -29,8 +29,8 @@ func (acp AlarmControlPanel) ArmWithCustomBypass(entityId string, serviceData ..
 }
 
 // Send the alarm the command for arm home. Takes an entityId and an optional map that is translated into service_data.
-func (acp AlarmControlPanel) ArmHome(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (acp AlarmControlPanel) ArmHome(entityId AlarmControlPanelID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "alarm_control_panel"
 	req.Service = "alarm_arm_home"
 	if len(serviceData) != 0 {
@@ -41,8 +41,8 @@ func (acp AlarmControlPanel) ArmHome(entityId string, serviceData ...map[string]
 }
 
 // Send the alarm the command for arm night. Takes an entityId and an optional map that is translated into service_data.
-func (acp AlarmControlPanel) ArmNight(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (acp AlarmControlPanel) ArmNight(entityId AlarmControlPanelID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "alarm_control_panel"
 	req.Service = "alarm_arm_night"
 	if len(serviceData) != 0 {
@@ -53,8 +53,8 @@ func (acp AlarmControlPanel) ArmNight(entityId string, serviceData ...map[string
 }
 
 // Send the alarm the command for arm vacation. Takes an entityId and an optional map that is translated into service_data.
-func (acp AlarmControlPanel) ArmVacation(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (acp AlarmControlPanel) ArmVacation(entityId AlarmControlPanelID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "alarm_control_panel"
 	req.Service = "alarm_arm_vacation"
 	if len(serviceData) != 0 {
@@ -65,8 +65,8 @@ func (acp AlarmControlPanel) ArmVacation(entityId string, serviceData ...map[str
 }
 
 // Send the alarm the command for disarm. Takes an entityId and an optional map that is translated into service_data.
-func (acp AlarmControlPanel) Disarm(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (acp AlarmControlPanel) Disarm(entityId AlarmControlPanelID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "alarm_control_panel"
 	req.Service = "alarm_disarm"
 	if len(serviceData) != 0 {
@@ -77,8 +77,8 @@ func (acp AlarmControlPanel) Disarm(entityId string, serviceData ...map[string]a
 }
 
 // Send the alarm the command for trigger. Takes an entityId and an optional map that is translated into service_data.
-func (acp AlarmControlPanel) Trigger(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (acp AlarmControlPanel) Trigger(entityId AlarmControlPanelID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "alarm_control_panel"
 	req.Service = "alarm_trigger"
 	if len(serviceData) != 0 {

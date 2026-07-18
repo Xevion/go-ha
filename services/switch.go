@@ -5,8 +5,8 @@ type Switch struct {
 }
 
 // TurnOn turns on a switch entity.
-func (s Switch) TurnOn(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (s Switch) TurnOn(entityId SwitchID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "switch"
 	req.Service = "turn_on"
 
@@ -14,8 +14,8 @@ func (s Switch) TurnOn(entityId string) error {
 }
 
 // Toggle toggles a switch entity.
-func (s Switch) Toggle(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (s Switch) Toggle(entityId SwitchID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "switch"
 	req.Service = "toggle"
 
@@ -23,8 +23,8 @@ func (s Switch) Toggle(entityId string) error {
 }
 
 // TurnOff turns off a switch entity.
-func (s Switch) TurnOff(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (s Switch) TurnOff(entityId SwitchID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "switch"
 	req.Service = "turn_off"
 

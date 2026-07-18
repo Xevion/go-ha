@@ -5,8 +5,8 @@ type Script struct {
 }
 
 // Reload a script that was created in the HA UI.
-func (s Script) Reload(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (s Script) Reload(entityId ScriptID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "script"
 	req.Service = "reload"
 
@@ -14,8 +14,8 @@ func (s Script) Reload(entityId string) error {
 }
 
 // Toggle a script that was created in the HA UI.
-func (s Script) Toggle(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (s Script) Toggle(entityId ScriptID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "script"
 	req.Service = "toggle"
 
@@ -32,8 +32,8 @@ func (s Script) TurnOff() error {
 }
 
 // TurnOn a script that was created in the HA UI.
-func (s Script) TurnOn(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (s Script) TurnOn(entityId ScriptID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "script"
 	req.Service = "turn_on"
 

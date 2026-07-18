@@ -5,8 +5,8 @@ type InputText struct {
 }
 
 // Set sets the value of an input text entity.
-func (ib InputText) Set(entityId string, value string) error {
-	req := NewBaseServiceRequest(entityId)
+func (ib InputText) Set(entityId InputTextID, value string) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "input_text"
 	req.Service = "set_value"
 	req.ServiceData = map[string]any{

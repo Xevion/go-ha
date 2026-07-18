@@ -5,8 +5,8 @@ type HomeAssistant struct {
 }
 
 // TurnOn a Home Assistant entity. Takes an entityId and an optional map that is translated into service_data.
-func (ha *HomeAssistant) TurnOn(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (ha *HomeAssistant) TurnOn(entityId EntityID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "homeassistant"
 	req.Service = "turn_on"
 	if len(serviceData) != 0 {
@@ -17,8 +17,8 @@ func (ha *HomeAssistant) TurnOn(entityId string, serviceData ...map[string]any) 
 }
 
 // Toggle a Home Assistant entity. Takes an entityId and an optional map that is translated into service_data.
-func (ha *HomeAssistant) Toggle(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (ha *HomeAssistant) Toggle(entityId EntityID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "homeassistant"
 	req.Service = "toggle"
 	if len(serviceData) != 0 {
@@ -29,8 +29,8 @@ func (ha *HomeAssistant) Toggle(entityId string, serviceData ...map[string]any) 
 }
 
 // TurnOff turns off a Home Assistant entity.
-func (ha *HomeAssistant) TurnOff(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (ha *HomeAssistant) TurnOff(entityId EntityID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "homeassistant"
 	req.Service = "turn_off"
 

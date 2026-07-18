@@ -5,8 +5,8 @@ type InputButton struct {
 }
 
 // Press presses an input button entity.
-func (ib InputButton) Press(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (ib InputButton) Press(entityId InputButtonID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "input_button"
 	req.Service = "press"
 

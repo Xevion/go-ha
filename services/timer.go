@@ -5,8 +5,8 @@ type Timer struct {
 }
 
 // See https://www.home-assistant.io/integrations/timer/#action-timerstart
-func (t Timer) Start(entityId string, duration string) error {
-	req := NewBaseServiceRequest(entityId)
+func (t Timer) Start(entityId TimerID, duration string) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "timer"
 	req.Service = "start"
 	req.ServiceData = map[string]any{
@@ -17,8 +17,8 @@ func (t Timer) Start(entityId string, duration string) error {
 }
 
 // See https://www.home-assistant.io/integrations/timer/#action-timerstart
-func (t Timer) Change(entityId string, duration string) error {
-	req := NewBaseServiceRequest(entityId)
+func (t Timer) Change(entityId TimerID, duration string) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "timer"
 	req.Service = "change"
 	req.ServiceData = map[string]any{
@@ -29,8 +29,8 @@ func (t Timer) Change(entityId string, duration string) error {
 }
 
 // See https://www.home-assistant.io/integrations/timer/#action-timerpause
-func (t Timer) Pause(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (t Timer) Pause(entityId TimerID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "timer"
 	req.Service = "pause"
 	return t.conn.Send(&req)
@@ -45,8 +45,8 @@ func (t Timer) Cancel() error {
 }
 
 // See https://www.home-assistant.io/integrations/timer/#action-timerfinish
-func (t Timer) Finish(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (t Timer) Finish(entityId TimerID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "timer"
 	req.Service = "finish"
 	return t.conn.Send(&req)

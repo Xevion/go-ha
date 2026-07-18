@@ -5,8 +5,8 @@ type ZWaveJS struct {
 }
 
 // ZWaveJS bulk_set_partial_config_parameters service.
-func (zw ZWaveJS) BulkSetPartialConfigParam(entityId string, parameter int, value any) error {
-	req := NewBaseServiceRequest(entityId)
+func (zw ZWaveJS) BulkSetPartialConfigParam(entityId EntityID, parameter int, value any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "zwave_js"
 	req.Service = "bulk_set_partial_config_parameters"
 	req.ServiceData = map[string]any{

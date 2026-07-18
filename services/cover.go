@@ -5,8 +5,8 @@ type Cover struct {
 }
 
 // Close all or specified cover. Takes an entityId.
-func (c Cover) Close(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (c Cover) Close(entityId CoverID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "cover"
 	req.Service = "close_cover"
 
@@ -14,8 +14,8 @@ func (c Cover) Close(entityId string) error {
 }
 
 // Close all or specified cover tilt. Takes an entityId.
-func (c Cover) CloseTilt(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (c Cover) CloseTilt(entityId CoverID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "cover"
 	req.Service = "close_cover_tilt"
 
@@ -23,8 +23,8 @@ func (c Cover) CloseTilt(entityId string) error {
 }
 
 // Open all or specified cover. Takes an entityId.
-func (c Cover) Open(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (c Cover) Open(entityId CoverID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "cover"
 	req.Service = "open_cover"
 
@@ -32,8 +32,8 @@ func (c Cover) Open(entityId string) error {
 }
 
 // Open all or specified cover tilt. Takes an entityId.
-func (c Cover) OpenTilt(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (c Cover) OpenTilt(entityId CoverID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "cover"
 	req.Service = "open_cover_tilt"
 
@@ -41,8 +41,8 @@ func (c Cover) OpenTilt(entityId string) error {
 }
 
 // Move to specific position all or specified cover. Takes an entityId and an optional map that is translated into service_data.
-func (c Cover) SetPosition(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (c Cover) SetPosition(entityId CoverID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "cover"
 	req.Service = "set_cover_position"
 	if len(serviceData) != 0 {
@@ -53,8 +53,8 @@ func (c Cover) SetPosition(entityId string, serviceData ...map[string]any) error
 }
 
 // Move to specific position all or specified cover tilt. Takes an entityId and an optional map that is translated into service_data.
-func (c Cover) SetTiltPosition(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (c Cover) SetTiltPosition(entityId CoverID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "cover"
 	req.Service = "set_cover_tilt_position"
 	if len(serviceData) != 0 {
@@ -65,8 +65,8 @@ func (c Cover) SetTiltPosition(entityId string, serviceData ...map[string]any) e
 }
 
 // Stop a cover entity. Takes an entityId.
-func (c Cover) Stop(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (c Cover) Stop(entityId CoverID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "cover"
 	req.Service = "stop_cover"
 
@@ -74,8 +74,8 @@ func (c Cover) Stop(entityId string) error {
 }
 
 // Stop a cover entity tilt. Takes an entityId.
-func (c Cover) StopTilt(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (c Cover) StopTilt(entityId CoverID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "cover"
 	req.Service = "stop_cover_tilt"
 
@@ -83,8 +83,8 @@ func (c Cover) StopTilt(entityId string) error {
 }
 
 // Toggle a cover open/closed. Takes an entityId.
-func (c Cover) Toggle(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (c Cover) Toggle(entityId CoverID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "cover"
 	req.Service = "toggle"
 
@@ -92,8 +92,8 @@ func (c Cover) Toggle(entityId string) error {
 }
 
 // Toggle a cover tilt open/closed. Takes an entityId.
-func (c Cover) ToggleTilt(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (c Cover) ToggleTilt(entityId CoverID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "cover"
 	req.Service = "toggle_cover_tilt"
 

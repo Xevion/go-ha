@@ -17,8 +17,8 @@ func (s Scene) Apply(serviceData ...map[string]any) error {
 }
 
 // Create a scene entity. Takes an entityId and an optional map that is translated into service_data.
-func (s Scene) Create(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (s Scene) Create(entityId SceneID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "scene"
 	req.Service = "create"
 	if len(serviceData) != 0 {
@@ -38,8 +38,8 @@ func (s Scene) Reload() error {
 }
 
 // TurnOn a scene entity. Takes an entityId and an optional map that is translated into service_data.
-func (s Scene) TurnOn(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (s Scene) TurnOn(entityId SceneID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "scene"
 	req.Service = "turn_on"
 	if len(serviceData) != 0 {

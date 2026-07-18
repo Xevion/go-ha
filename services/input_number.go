@@ -4,8 +4,8 @@ type InputNumber struct {
 	conn Sender
 }
 
-func (ib InputNumber) Set(entityId string, value float32) error {
-	req := NewBaseServiceRequest(entityId)
+func (ib InputNumber) Set(entityId InputNumberID, value float32) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "input_number"
 	req.Service = "set_value"
 	req.ServiceData = map[string]any{"value": value}
@@ -13,16 +13,16 @@ func (ib InputNumber) Set(entityId string, value float32) error {
 	return ib.conn.Send(&req)
 }
 
-func (ib InputNumber) Increment(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (ib InputNumber) Increment(entityId InputNumberID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "input_number"
 	req.Service = "increment"
 
 	return ib.conn.Send(&req)
 }
 
-func (ib InputNumber) Decrement(entityId string) error {
-	req := NewBaseServiceRequest(entityId)
+func (ib InputNumber) Decrement(entityId InputNumberID) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "input_number"
 	req.Service = "decrement"
 

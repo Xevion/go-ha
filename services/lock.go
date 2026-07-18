@@ -5,8 +5,8 @@ type Lock struct {
 }
 
 // Lock a lock entity. Takes an entityId and an optional map that is translated into service_data.
-func (l Lock) Lock(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (l Lock) Lock(entityId LockID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "lock"
 	req.Service = "lock"
 	if len(serviceData) != 0 {
@@ -17,8 +17,8 @@ func (l Lock) Lock(entityId string, serviceData ...map[string]any) error {
 }
 
 // Unlock a lock entity. Takes an entityId and an optional map that is translated into service_data.
-func (l Lock) Unlock(entityId string, serviceData ...map[string]any) error {
-	req := NewBaseServiceRequest(entityId)
+func (l Lock) Unlock(entityId LockID, serviceData ...map[string]any) error {
+	req := NewBaseServiceRequest(string(entityId))
 	req.Domain = "lock"
 	req.Service = "unlock"
 	if len(serviceData) != 0 {
