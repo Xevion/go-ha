@@ -10,8 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/Workiva/go-datastructures/queue"
-
 	"github.com/Xevion/go-ha/internal"
 	"github.com/Xevion/go-ha/internal/connect"
 	"github.com/Xevion/go-ha/types"
@@ -76,17 +74,6 @@ type App struct {
 	// from construction so the cache stays current, but listeners must not run
 	// before Start has taken its startup pass.
 	started atomic.Bool
-}
-
-type Item types.Item
-
-func (i Item) Compare(other queue.Item) int {
-	if i.Priority > other.(Item).Priority {
-		return 1
-	} else if i.Priority == other.(Item).Priority {
-		return 0
-	}
-	return -1
 }
 
 // NewApp establishes the WebSocket connection and returns an object you can use to register schedules and listeners.

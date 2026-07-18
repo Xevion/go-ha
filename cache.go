@@ -91,6 +91,7 @@ func (c *entityCache) apply(es EntityState) {
 func (c *entityCache) remove(entityId string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	delete(c.entities, entityId)
 	if c.pending {
 		c.touched[entityId] = struct{}{}

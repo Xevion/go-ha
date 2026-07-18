@@ -89,3 +89,25 @@ func TestServiceDataIsCarried(t *testing.T) {
 	require.NoError(t, BuildService[Light](r).TurnOn("light.a", map[string]any{"brightness": 200}))
 	assert.Equal(t, 200, r.last.ServiceData["brightness"])
 }
+
+// Home Assistant gains services faster than this package models them, and
+// custom integrations define their own. Call is the escape hatch.
+func TestCallReachesAnUnmodelledService(t *testing.T) {
+	r := &recorder{}
+
+	require.NoError(t, Call(r, "custom_integration", "do_thing", "light.a",
+		map[string]any{"mode": "fast"}))
+
+	require.NotNil(t, r.last)
+	assert.Equal(t, "custom_integration", r.last.Domain)
+	assert.Equal(t, "do_thing", r.last.Service)
+	assert.Equal(t, "light.a", r.last.Target.EntityId)
+	assert.Equal(t, "fast", r.last.ServiceData["mode"])
+}
+
+func TestCallWithoutATargetOmitsIt(t *testing.T) {
+	r := &recorder{}
+
+	require.NoError(t, Call(r, "homeassistant", "restart", "", nil))
+	assert.Nil(t, r.last.Target)
+}

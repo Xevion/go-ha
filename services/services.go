@@ -70,3 +70,16 @@ func NewBaseServiceRequest(entityId string) BaseServiceRequest {
 
 	return request
 }
+
+// Call invokes any Home Assistant service, including ones this package does
+// not model. entityID may be empty for services that take no target.
+//
+// The typed services are the ergonomic path; this is the escape hatch, so a
+// custom integration or a service added after this release is still reachable.
+func Call(sender Sender, domain, service string, entityID EntityID, data map[string]any) error {
+	req := NewBaseServiceRequest(string(entityID))
+	req.Domain = domain
+	req.Service = service
+	req.ServiceData = data
+	return sender.Send(&req)
+}

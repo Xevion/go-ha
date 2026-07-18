@@ -140,9 +140,13 @@ func (s *Server) SetSun(up bool, nextRising, nextSetting time.Time) {
 }
 
 func (s *Server) buildEntity(entityID, state string, attributes []map[string]any) entity {
+	// Copied, not retained: a caller that reuses or mutates its map would
+	// otherwise change state the server has already reported.
 	attrs := map[string]any{}
-	if len(attributes) > 0 && attributes[0] != nil {
-		attrs = attributes[0]
+	if len(attributes) > 0 {
+		for k, v := range attributes[0] {
+			attrs[k] = v
+		}
 	}
 	now := time.Now()
 	return entity{

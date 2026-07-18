@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	ha "github.com/Xevion/go-ha"
+	"github.com/Xevion/go-ha/hatest"
 	"github.com/Xevion/go-ha/services"
 	"github.com/Xevion/go-ha/types"
 )
@@ -153,4 +154,17 @@ func TestPlainStringsStillWork(t *testing.T) {
 		Build()
 
 	require.NoError(t, err)
+}
+
+// Errors have to be classifiable from outside, or callers are left matching on
+// message text.
+func TestErrorsAreClassifiableFromOutside(t *testing.T) {
+	server := hatest.New(t)
+	server.SetState("light.hall", "on")
+
+	app := newApp(t, server)
+	time.Sleep(100 * time.Millisecond)
+
+	_, err := app.State().Get("light.nonexistent")
+	assert.ErrorIs(t, err, ha.ErrEntityNotFound)
 }

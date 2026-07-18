@@ -12,6 +12,25 @@ import (
 	"github.com/Xevion/go-ha/internal/scheduling"
 )
 
+// queueItem adapts a scheduled entry to the priority queue's interface. It is
+// unexported deliberately: exporting it would put the queue dependency in this
+// package's public API.
+type queueItem struct {
+	Value    any
+	Priority float64
+}
+
+func (i queueItem) Compare(other queue.Item) int {
+	switch {
+	case i.Priority > other.(queueItem).Priority:
+		return 1
+	case i.Priority == other.(queueItem).Priority:
+		return 0
+	default:
+		return -1
+	}
+}
+
 // scheduledEntry pairs a trigger with the callback to run when it fires, and
 // remembers the instant it is currently queued for.
 type scheduledEntry struct {
@@ -57,7 +76,7 @@ func (s *scheduler) add(trigger scheduling.Trigger, run func()) bool {
 }
 
 func (s *scheduler) push(entry *scheduledEntry) {
-	s.queue.Put(Item{
+	s.queue.Put(queueItem{
 		Value:    entry,
 		Priority: float64(entry.fireAt.Unix()),
 	})
@@ -75,7 +94,7 @@ func (s *scheduler) pop() *scheduledEntry {
 	if err != nil || len(items) == 0 {
 		return nil
 	}
-	return items[0].(Item).Value.(*scheduledEntry)
+	return items[0].(queueItem).Value.(*scheduledEntry)
 }
 
 // requeue puts an entry back for its following occurrence, or drops it when the
@@ -119,7 +138,7 @@ func (s *scheduler) peekLocked() *scheduledEntry {
 	if item == nil {
 		return nil
 	}
-	return item.(Item).Value.(*scheduledEntry)
+	return item.(queueItem).Value.(*scheduledEntry)
 }
 
 // runDue fires every entry due at or before now, requeueing each, and reports
@@ -182,7 +201,7 @@ func (s *scheduler) refresh(now time.Time) int {
 
 	moved := 0
 	for _, item := range items {
-		entry := item.(Item).Value.(*scheduledEntry)
+		entry := item.(queueItem).Value.(*scheduledEntry)
 
 		// An entry already due is about to run. Re-deriving it here would push
 		// it past now and skip that occurrence entirely.
