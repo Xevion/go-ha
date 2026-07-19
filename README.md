@@ -1,6 +1,17 @@
 # go-ha
 
+<p align="center">
+  <a href="https://github.com/Xevion/go-ha/actions/workflows/ci.yml"><img src="https://github.com/Xevion/go-ha/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://pkg.go.dev/github.com/Xevion/go-ha"><img src="https://pkg.go.dev/badge/github.com/Xevion/go-ha.svg" alt="Go Reference"></a>
+  <img src="https://img.shields.io/badge/Go-1.25+-blue.svg" alt="Go 1.25+">
+  <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License: Apache 2.0"></a>
+</p>
+
 Write strongly typed [Home Assistant](https://www.home-assistant.io/) automations in Go.
+
+go-ha connects over Home Assistant's WebSocket API and runs your automations as an
+ordinary Go program, with entities typed per domain so a wrong one is a compile
+error rather than a silent misfire.
 
 ```bash
 go get github.com/Xevion/go-ha
