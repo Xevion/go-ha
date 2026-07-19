@@ -86,3 +86,15 @@ jobs:
           HA_CONTAINER: ha
         run: |
           HA_TOKEN=$(cat "$RUNNER_TEMP/ha_token") go test -tags live -timeout 15m ./...
+
+      # The generator's output is only ever validated hermetically otherwise
+      # (it parses, its id types exist). This runs the real thing against the
+      # live instance and compiles what it emits, which is the only check that
+      # the generated package builds against the actual services types.
+      - name: Generated entities compile
+        run: |
+          printf 'url: http://localhost:8123\n' > gen.yaml
+          HA_AUTH_TOKEN=$(cat "$RUNNER_TEMP/ha_token") go run ./cmd/generate -config gen.yaml
+          test -f entities/entities.go
+          go build ./entities/
+          go vet ./entities/

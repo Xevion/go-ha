@@ -4,3 +4,7 @@ testing/
 # Compiled binaries from `go build` in a package directory.
 /generate
 /example/example
+
+# Generator inputs and output: gen.yaml holds a token, entities/ is emitted.
+/gen.yaml
+/entities/
