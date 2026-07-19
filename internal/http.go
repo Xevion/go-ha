@@ -18,6 +18,11 @@ var (
 	ErrEntityNotFound = errors.New("entity not found")
 	// ErrHttpStatus reports any other non-success response.
 	ErrHttpStatus = errors.New("unexpected http status")
+	// ErrEmptyResponse reports a success status carrying no body, which these
+	// endpoints never legitimately return. It is worth its own error because a
+	// transport that silently drops a body reads as an empty document
+	// downstream, and "unexpected end of JSON input" says nothing about why.
+	ErrEmptyResponse = errors.New("empty response body")
 )
 
 // statusError maps a response status onto a sentinel, so callers can match with
@@ -53,7 +58,10 @@ func NewHttpClient(ctx context.Context, baseUrl *url.URL, token string) *HttpCli
 			return err != nil || (r.StatusCode() >= 500 && r.StatusCode() != 403)
 		}).
 		SetHeader("User-Agent", "go-ha/"+Version).
-		SetContext(ctx)
+		SetContext(ctx).
+		// Replaces resty's own, which reads the body as a raw deflate stream and
+		// so decodes anything Home Assistant compressed to nothing.
+		AddContentDecompresser("deflate", decompressDeflate)
 
 	return &HttpClient{client: client, token: token}
 }
@@ -82,7 +90,12 @@ func (c *HttpClient) GetState(entityId string) ([]byte, error) {
 		return nil, fmt.Errorf("requesting state of %q: %w: %s", entityId, statusError(resp), resp.Bytes())
 	}
 
-	return resp.Bytes(), nil
+	body := resp.Bytes()
+	if len(body) == 0 {
+		return nil, fmt.Errorf("requesting state of %q: %w", entityId, ErrEmptyResponse)
+	}
+
+	return body, nil
 }
 
 // GetStates returns the states of all entities.
@@ -97,5 +110,10 @@ func (c *HttpClient) GetStates() ([]byte, error) {
 		return nil, fmt.Errorf("requesting all states: %w: %s", statusError(resp), resp.Bytes())
 	}
 
-	return resp.Bytes(), nil
+	body := resp.Bytes()
+	if len(body) == 0 {
+		return nil, fmt.Errorf("requesting all states: %w", ErrEmptyResponse)
+	}
+
+	return body, nil
 }
