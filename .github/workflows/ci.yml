@@ -58,6 +58,13 @@ jobs:
       - name: Coverage summary
         run: go tool cover -func=coverage.out | tail -1
 
+      # -race changes goroutine scheduling and hides timing-dependent logic
+      # bugs, such as an event dispatched before an earlier one updated the
+      # cache. A plain run, repeated, exercises the ordering the race detector
+      # would otherwise paper over.
+      - name: Test (no race)
+        run: go test -count=3 ./...
+
   # The rest of the suite runs against a fake, which can only confirm this
   # package agrees with its own idea of the protocol. This job is the one that
   # can disagree with Home Assistant.

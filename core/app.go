@@ -109,6 +109,13 @@ func NewApp(request types.NewAppRequest) (*App, error) {
 				slog.Error("Failed to load entity states", "error", err)
 			}
 		},
+		// Applied in wire order on the reader, so a condition a worker evaluates
+		// sees every event up to and including the one that triggered it. Done
+		// on the worker instead, it would race the update of an entity changed
+		// just before the trigger.
+		OnEvent: func(m connect.Message) {
+			state.applyEvent(m.Raw)
+		},
 	})
 	if err != nil {
 		ctxCancel()
@@ -183,14 +190,14 @@ func (app *App) onEvent(msg connect.Message) {
 	app.dispatchEvent(msg.Raw)
 }
 
-// onStateChanged keeps the cache current and, once the app has started, runs
-// the listeners watching the entity.
+// onStateChanged refreshes sun schedules and, once the app has started, runs
+// the automations watching the entity. The cache is already current: the event
+// was applied on the reader, in wire order, before it reached this worker.
 func (app *App) onStateChanged(msg connect.Message) {
-	app.state.applyEvent(msg.Raw)
 	app.refreshSunSchedules(msg.Raw)
 
-	// Before Start the cache is still worth maintaining, but automations must
-	// not fire until the app is running.
+	// Before Start the cache is still maintained, on the reader, but automations
+	// must not fire until the app is running.
 	if app.started.Load() {
 		app.dispatchEvent(msg.Raw)
 	}

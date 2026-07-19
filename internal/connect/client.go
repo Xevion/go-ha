@@ -49,6 +49,15 @@ type Options struct {
 	// replayed, including after a reconnect. It runs on its own goroutine: the
 	// reader cannot wait on it without backing the socket up.
 	OnConnected func()
+
+	// OnEvent, if set, is called for every event message in the order it
+	// arrives off the wire, on the reader goroutine, before the message is
+	// queued for its handler. Handlers run concurrently on the worker pool, so
+	// their order is not the wire order; this hook is where ordered state, such
+	// as a cache the handlers read, is maintained. It must not block, for the
+	// same reason the reader must not: a stalled reader stops draining the
+	// socket and Home Assistant hangs up.
+	OnEvent func(Message)
 }
 
 // DefaultOptions returns the settings used when none are supplied.
@@ -418,6 +427,14 @@ func (c *Client) route(msg Message, reporter *dropReporter) {
 	if msg.Type != typeEvent {
 		slog.Debug("Ignoring unsolicited message", "type", msg.Type, "id", msg.ID)
 		return
+	}
+
+	// Applied here, on the reader, so ordered state is updated in wire order
+	// before the workers dispatch out of order. A dropped event was still
+	// applied, which is correct: the cache should reflect it even when the
+	// backlog means no handler runs for it.
+	if c.opts.OnEvent != nil {
+		c.opts.OnEvent(msg)
 	}
 
 	select {
