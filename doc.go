@@ -54,6 +54,14 @@
 // lookup rather than an HTTP round trip, and automations keep working through a
 // disconnect.
 //
+// State survives a reconnect; individual transitions do not. Home Assistant
+// replays nothing to a client that was not listening, so a change that happens
+// while the connection is down is never delivered as an event and no trigger
+// sees it. The reseed leaves the cache correct, meaning a condition reading
+// state afterwards is accurate, but an automation waiting on the transition
+// itself simply misses that one. Prefer conditions over remembered transitions
+// where a missed edge would matter.
+//
 // # Testing
 //
 // The hatest package runs an in-process Home Assistant, so automations can be
