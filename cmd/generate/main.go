@@ -80,7 +80,7 @@ func generate(config Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to create app: %w", err)
 	}
-	defer app.Cleanup()
+	defer app.Close()
 
 	// Validate that the home zone exists before proceeding
 

@@ -192,8 +192,6 @@ func (t *oneShotTrigger) NextTime(time.Time) *time.Time {
 	return &t.at
 }
 
-func (t *oneShotTrigger) Hash() uint64 { return 1 }
-
 func TestSchedulerDoesNotBlockOnAnEmptyQueue(t *testing.T) {
 	s := newScheduler(internal.NewFakeClock(schedulerBase))
 

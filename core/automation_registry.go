@@ -3,7 +3,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"hash/fnv"
 	"log/slog"
 	"time"
 
@@ -34,12 +33,6 @@ func (a schedulerAdapter) NextTime(now time.Time) *time.Time {
 		return nil
 	}
 	return &next
-}
-
-func (a schedulerAdapter) Hash() uint64 {
-	h := fnv.New64()
-	fmt.Fprintf(h, "%v", a.trigger)
-	return h.Sum64()
 }
 
 func (a schedulerAdapter) String() string { return fmt.Sprint(a.trigger) }

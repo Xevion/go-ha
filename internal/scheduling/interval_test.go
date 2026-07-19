@@ -152,27 +152,3 @@ func TestIntervalTrigger_NextTimeReportsLocalTime(t *testing.T) {
 	assert.Equal(t, time.Local.String(), next.Location().String(),
 		"an interval with no epoch must report local time, as the fixed time and sun triggers do")
 }
-
-func TestIntervalTrigger_Hash(t *testing.T) {
-	t.Run("stable hash for same configuration", func(t *testing.T) {
-		trigger1, _ := NewIntervalTrigger(time.Hour, 30*time.Minute)
-		trigger2, _ := NewIntervalTrigger(time.Hour, 30*time.Minute)
-		assert.Equal(t, trigger1.Hash(), trigger2.Hash())
-	})
-
-	t.Run("hash changes with interval", func(t *testing.T) {
-		trigger1, _ := NewIntervalTrigger(time.Hour, 30*time.Minute)
-		trigger2, _ := NewIntervalTrigger(time.Hour, 31*time.Minute)
-		assert.NotEqual(t, trigger1.Hash(), trigger2.Hash())
-	})
-
-	t.Run("hash changes with epoch", func(t *testing.T) {
-		trigger1, _ := NewIntervalTrigger(time.Hour)
-		trigger1 = trigger1.WithEpoch(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC))
-
-		trigger2, _ := NewIntervalTrigger(time.Hour)
-		trigger2 = trigger2.WithEpoch(time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC))
-
-		assert.NotEqual(t, trigger1.Hash(), trigger2.Hash())
-	})
-}

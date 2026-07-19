@@ -2,15 +2,14 @@ package scheduling
 
 import (
 	"fmt"
-	"hash/fnv"
 	"strings"
 	"time"
 )
 
 // IntervalTrigger represents a trigger that fires at a sequence of intervals.
 type IntervalTrigger struct {
-	intervals     []time.Duration // required for hash
-	epoch         time.Time       // required for hash
+	intervals     []time.Duration
+	epoch         time.Time
 	totalDuration time.Duration
 }
 
@@ -93,14 +92,4 @@ func (t *IntervalTrigger) String() string {
 		parts = append(parts, d.String())
 	}
 	return "every " + strings.Join(parts, " then ")
-}
-
-// Hash returns a stable hash value for the IntervalTrigger.
-func (t *IntervalTrigger) Hash() uint64 {
-	h := fnv.New64a()
-	fmt.Fprintf(h, "interval:%d", t.epoch.UnixNano())
-	for _, d := range t.intervals {
-		fmt.Fprintf(h, ":%d", d)
-	}
-	return h.Sum64()
 }

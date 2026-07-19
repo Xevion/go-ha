@@ -61,8 +61,7 @@ func TestAppCloseWithTimeout(t *testing.T) {
 	}
 }
 
-func TestAppCleanup(t *testing.T) {
-	// Test the legacy Cleanup method
+func TestCloseCancelsContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	app := &App{
@@ -70,15 +69,14 @@ func TestAppCleanup(t *testing.T) {
 		ctxCancel: cancel,
 	}
 
-	// Test that Cleanup() doesn't panic
-	app.Cleanup()
+	if err := app.Close(); err != nil {
+		t.Errorf("Close() returned error: %v", err)
+	}
 
-	// Verify context was cancelled
 	select {
 	case <-ctx.Done():
-		// Context was cancelled as expected
 	default:
-		t.Error("Context was not cancelled by Cleanup()")
+		t.Error("Context was not cancelled by Close()")
 	}
 }
 
@@ -116,8 +114,10 @@ func TestAppWithNilFields(t *testing.T) {
 		t.Errorf("Close() returned error: %v", err)
 	}
 
-	// Test Cleanup with nil fields
-	app.Cleanup()
+	// Close is idempotent: a second call must also be safe.
+	if err := app.Close(); err != nil {
+		t.Errorf("second Close() returned error: %v", err)
+	}
 
 	// Test Services with nil service
 	service := app.Services()

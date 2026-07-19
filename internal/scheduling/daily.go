@@ -2,7 +2,6 @@ package scheduling
 
 import (
 	"fmt"
-	"hash/fnv"
 	"time"
 
 	"github.com/Xevion/go-ha/internal"
@@ -12,7 +11,6 @@ import (
 type Trigger interface {
 	// NextTime calculates the next occurrence of this trigger after the given time
 	NextTime(now time.Time) *time.Time
-	Hash() uint64
 }
 
 // FixedTimeTrigger represents a trigger at a specific hour and minute each day
@@ -34,11 +32,4 @@ func (t *FixedTimeTrigger) NextTime(now time.Time) *time.Time {
 
 func (t *FixedTimeTrigger) String() string {
 	return fmt.Sprintf("%02d:%02d", t.Hour, t.Minute)
-}
-
-// Hash returns a stable hash value for the FixedTimeTrigger
-func (t *FixedTimeTrigger) Hash() uint64 {
-	h := fnv.New64()
-	fmt.Fprintf(h, "%d:%d", t.Hour, t.Minute)
-	return h.Sum64()
 }

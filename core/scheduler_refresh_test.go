@@ -12,7 +12,6 @@ import (
 type alwaysDue struct{}
 
 func (alwaysDue) dynamic() bool { return true }
-func (alwaysDue) Hash() uint64  { return 1 }
 func (alwaysDue) NextTime(after time.Time) *time.Time {
 	t := time.Now().Add(time.Millisecond)
 	return &t

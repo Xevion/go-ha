@@ -203,13 +203,6 @@ func (app *App) onStateChanged(msg connect.Message) {
 	}
 }
 
-// Cleanup shuts the application down.
-//
-// Deprecated: use Close, which reports whether shutdown succeeded.
-func (app *App) Cleanup() {
-	_ = app.Close()
-}
-
 // Close performs a clean shutdown: it stops the background goroutines, closes
 // the connection, and waits for both to finish.
 func (app *App) Close() error {

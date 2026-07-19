@@ -2,7 +2,6 @@ package scheduling
 
 import (
 	"fmt"
-	"hash/fnv"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -10,7 +9,7 @@ import (
 
 // CronTrigger represents a trigger based on a cron expression.
 type CronTrigger struct {
-	expression string // required for hash
+	expression string
 	schedule   cron.Schedule
 }
 
@@ -37,11 +36,4 @@ func (t *CronTrigger) NextTime(now time.Time) *time.Time {
 
 func (t *CronTrigger) String() string {
 	return "cron(" + t.expression + ")"
-}
-
-// Hash returns a stable hash value for the CronTrigger.
-func (t *CronTrigger) Hash() uint64 {
-	h := fnv.New64()
-	fmt.Fprintf(h, "cron:%s", t.expression)
-	return h.Sum64()
 }
