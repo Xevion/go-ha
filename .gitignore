@@ -1,2 +1,6 @@
 testing/
 .vscode/launch.json
+
+# Compiled binaries from `go build` in a package directory.
+/generate
+/example/example
