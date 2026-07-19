@@ -1,4 +1,4 @@
-// Package ha writes Home Assistant automations in Go.
+// Package ha writes strongly typed Home Assistant automations in Go.
 //
 // An automation is four layers: a trigger decides when to consider running, a
 // condition decides whether to go ahead, a policy decides what to do about
@@ -46,6 +46,17 @@
 // [Mode] mirrors Home Assistant's automation mode and applies to the automation
 // as a whole. Throttle is counted per entity, so one automation watching many
 // entities keeps a separate window for each.
+//
+// # Connection
+//
+// The app holds one WebSocket connection to Home Assistant and supervises it:
+// when it drops, the app reconnects with exponential backoff and jitter and
+// replays its subscriptions, since Home Assistant restores none of them.
+// Incoming events are read into a bounded queue drained by a worker pool. Home
+// Assistant disconnects a client that stops reading its socket, so once the
+// queue is full further events are dropped and counted rather than allowed to
+// stall the connection. Tune the queue, worker count and keepalive through
+// [types.ConnectionOptions].
 //
 // # State
 //
