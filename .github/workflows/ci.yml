@@ -70,20 +70,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Start Home Assistant
-        run: |
-          mkdir -p "$RUNNER_TEMP/hacfg"
-          docker run -d --name ha -p 8123:8123 \
-            -v "$RUNNER_TEMP/hacfg:/config" \
-            ghcr.io/home-assistant/home-assistant:stable
-          for _ in $(seq 1 90); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 http://localhost:8123/ || true)
-            if [ "$code" = "200" ] || [ "$code" = "302" ]; then exit 0; fi
-            sleep 2
-          done
-          echo "Home Assistant did not start"; docker logs ha; exit 1
-
-      - name: Onboard and configure
+      - name: Start and onboard Home Assistant
         run: ./.github/scripts/setup-live-ha.sh
 
       - name: Live tests
