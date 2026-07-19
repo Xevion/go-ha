@@ -68,8 +68,25 @@ type connection struct {
 func New(t testing.TB) *Server {
 	t.Helper()
 
+	s := newServer()
+	s.t = t
+	t.Cleanup(s.Close)
+	return s
+}
+
+// Start starts a server for use outside a test, where there is no testing.TB to
+// register cleanup with. The caller must Close it.
+//
+// It exists so automations can be exercised in ordinary code and in runnable
+// examples, not only in tests. Without a testing.TB, WaitForCalls returns what
+// arrived within its timeout rather than failing a test, since there is none to
+// fail.
+func Start() *Server {
+	return newServer()
+}
+
+func newServer() *Server {
 	s := &Server{
-		t:        t,
 		entities: map[string]entity{},
 		conns:    map[*connection]struct{}{},
 	}
@@ -80,7 +97,6 @@ func New(t testing.TB) *Server {
 	mux.HandleFunc("/api/states", s.serveStates)
 
 	s.http = httptest.NewServer(mux)
-	t.Cleanup(s.Close)
 	return s
 }
 
@@ -251,9 +267,13 @@ func (s *Server) Calls() []ServiceCall {
 }
 
 // WaitForCalls blocks until at least n service calls have been made, and
-// reports them. It fails the test rather than hanging if they do not arrive.
+// reports them. Under New it fails the test rather than hanging if they do not
+// arrive; under Start, with no test to fail, it returns what it has once the
+// timeout elapses.
 func (s *Server) WaitForCalls(n int) []ServiceCall {
-	s.t.Helper()
+	if s.t != nil {
+		s.t.Helper()
+	}
 
 	deadline := time.Now().Add(2 * time.Second)
 	for {
@@ -261,8 +281,10 @@ func (s *Server) WaitForCalls(n int) []ServiceCall {
 			return calls
 		}
 		if time.Now().After(deadline) {
-			s.t.Fatalf("expected %d service call(s), saw %d", n, len(s.Calls()))
-			return nil
+			if s.t != nil {
+				s.t.Fatalf("expected %d service call(s), saw %d", n, len(s.Calls()))
+			}
+			return s.Calls()
 		}
 		time.Sleep(time.Millisecond)
 	}
